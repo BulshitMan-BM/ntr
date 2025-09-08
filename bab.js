@@ -955,6 +955,7 @@ function updateUserInfo(user) {
     });
 }
 
+// ===== SIDEBAR SYSTEM =====
 function initializeSidebarComponents() {
     const sidebar = document.getElementById('sidebar');
     const header = document.getElementById('header');
@@ -1043,6 +1044,7 @@ function initializeSidebarComponents() {
     window.addEventListener('resize', handleResize);
 }
 
+// ===== SUBMENU =====
 function toggleSubmenu(menuId) {
     const submenu = document.getElementById(menuId + '-submenu');
     const arrow = document.getElementById(menuId + '-arrow');
@@ -1086,6 +1088,7 @@ function handleMenuClick(menuId) {
     }
 }
 
+// ===== DARK MODE =====
 function initializeDashboardDarkMode() {
     const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -1113,4 +1116,5 @@ function updateDashboardDarkModeIcons(isDark) {
 }
 
 console.log('Dashboard System Initialized');
+
 
