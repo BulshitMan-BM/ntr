@@ -1174,7 +1174,8 @@ function toggleMobileSubmenu(menuId) {
 
 // ===== DARK MODE =====
 function initializeDashboardDarkMode() {
-    const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
+const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
+if (dashboardDarkModeToggle) dashboardDarkModeToggle.dataset.listener = "";
     const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark');
@@ -1185,9 +1186,10 @@ function initializeDashboardDarkMode() {
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
         updateDashboardDarkModeIcons(isDark);
     }
-    if (dashboardDarkModeToggle) {
-        dashboardDarkModeToggle.addEventListener('click', toggleDarkMode);
-    }
+if (dashboardDarkModeToggle && !dashboardDarkModeToggle.dataset.listener) {
+    dashboardDarkModeToggle.addEventListener('click', toggleDarkMode);
+    dashboardDarkModeToggle.dataset.listener = "true";
+}
 }
 
 function updateDashboardDarkModeIcons(isDark) {
