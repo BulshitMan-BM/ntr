@@ -767,10 +767,10 @@ function logout() {
     if (otpForm) otpForm.classList.add('hidden');
 
     // 🔴 Clear semua data session
-    localStorage.clear(); // langsung clear semua biar aman
+    localStorage.clear();
     currentUser = null;
 
-    // 🔴 Clear semua timer
+    // 🔴 Reset semua timer
     clearInterval(resendTimer);
     clearInterval(otpExpiryTimer);
     resendTimer = null;
@@ -807,6 +807,9 @@ function logout() {
         countdownElement.textContent = "1:00";
         countdownElement.parentElement.className = "mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium";
     }
+
+    // 🔴 Re-init dark mode toggle setelah logout
+    initializeDarkMode();
 }
 
 
@@ -917,28 +920,23 @@ let isCollapsed = false;
 function loadDashboard(user) {
     const loginContainer = document.getElementById('loginContainer');
     const dashboardContainer = document.getElementById('dashboardContainer');
-    
-    if (typeof resendTimer !== 'undefined' && resendTimer) {
-        clearInterval(resendTimer);
-        resendTimer = null;
-    }
-    if (typeof otpExpiryTimer !== 'undefined' && otpExpiryTimer) {
-        clearInterval(otpExpiryTimer);
-        otpExpiryTimer = null;
-    }
-    
+
+    if (resendTimer) clearInterval(resendTimer);
+    if (otpExpiryTimer) clearInterval(otpExpiryTimer);
+
     if (loginContainer) loginContainer.classList.add('hidden');
     if (dashboardContainer) dashboardContainer.classList.remove('hidden');
-    
+
     localStorage.setItem('isLoggedIn', 'true');
-    if (typeof currentUser !== 'undefined') {
-        currentUser = user;
-    }
-    
+    currentUser = user;
+
     updateUserInfo(user);
+
+    // 🔴 Pastikan listener sidebar & dark mode dipasang ulang setiap masuk dashboard
     initializeSidebarComponents();
-    initializeDashboardDarkMode();
+    initializeDarkMode();
 }
+
 
 function updateUserInfo(user) {
     const userName = user?.Username || user?.name || user?.nama || 'User';
