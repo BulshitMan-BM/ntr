@@ -846,8 +846,9 @@ function logout() {
         resendTimer = otpExpiryTimer = null;
 
         // Reset localStorage / sessionStorage
-        ['nik','userEmail','user','isLoggedIn'].forEach(k => localStorage.removeItem(k));
+        ['nik','userEmail','user','isLoggedIn', 'otpValue'].forEach(k => localStorage.removeItem(k));
         sessionStorage.clear();
+        clearOTPInputs();
 
         // Reset state global
         currentUser = null;
