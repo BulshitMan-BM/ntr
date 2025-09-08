@@ -758,87 +758,72 @@ function backToLogin() {
 }
 
 function logout() {
-    // ===== Reset containers =====
-    const loginContainer = document.getElementById('loginContainer');
-    const dashboardContainer = document.getElementById('dashboardContainer');
-    const loginForm = document.getElementById('loginForm');
-    const otpForm = document.getElementById('otpForm');
+    // Reset containers
+    document.getElementById('loginContainer')?.classList.remove('hidden');
+    document.getElementById('dashboardContainer')?.classList.add('hidden');
+    document.getElementById('loginForm')?.classList.remove('hidden');
+    document.getElementById('otpForm')?.classList.add('hidden');
 
-    if (loginContainer) loginContainer.classList.remove('hidden');
-    if (dashboardContainer) dashboardContainer.classList.add('hidden');
-    if (loginForm) loginForm.classList.remove('hidden');
-    if (otpForm) otpForm.classList.add('hidden');
-
-    // ===== Clear session & global state =====
+    // Clear storage
     localStorage.clear();
-    currentUser = null;
+    sessionStorage.clear();  // Tambahkan sessionStorage
 
-    // ===== Reset timers =====
+    // Reset global vars
+    currentUser = null;
+    resendAttempts = 0;
+    otpExpiryTime = OTP_EXPIRY_TIME;
+    isCollapsed = false;
+
+    // Stop timers
     clearInterval(resendTimer);
     clearInterval(otpExpiryTimer);
     resendTimer = null;
     otpExpiryTimer = null;
 
-    // ===== Reset counters & expiry =====
-    resendAttempts = 0;
-    otpExpiryTime = OTP_EXPIRY_TIME;
-
-    // ===== Reset login & OTP inputs =====
-    const nikInput = document.getElementById('nik');
-    const passwordInput = document.getElementById('password');
-    if (nikInput) nikInput.value = '';
-    if (passwordInput) passwordInput.value = '';
+    // Reset inputs
+    document.getElementById('nik')?.value = '';
+    document.getElementById('password')?.value = '';
     clearOTPInputs();
 
-    // ===== Reset buttons =====
+    // Reset buttons
     const otpButton = document.getElementById('otpButton');
     if (otpButton) {
         otpButton.disabled = false;
         otpButton.classList.remove('opacity-50', 'cursor-not-allowed');
     }
-
     const resendBtn = document.getElementById('resendBtn');
     if (resendBtn) {
         resendBtn.disabled = false;
         resendBtn.textContent = 'Kirim Ulang OTP';
     }
 
-    // ===== Reset OTP countdown =====
-    const countdownElement = document.getElementById("otpExpiryCountdown");
-    if (countdownElement) {
-        countdownElement.textContent = "1:00";
-        countdownElement.parentElement.className = "mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium";
+    // Reset countdown
+    const countdown = document.getElementById('otpExpiryCountdown');
+    if (countdown) {
+        countdown.textContent = "1:00";
+        countdown.parentElement.className = "mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium";
     }
 
-    // ===== Reset sidebar state =====
+    // Reset sidebar & submenu
     const sidebar = document.getElementById('sidebar');
-    if (sidebar) {
-        sidebar.classList.remove('w-16');
-        sidebar.classList.add('w-64');
-        isCollapsed = false;
-    }
-
-    const logoText = document.getElementById('logoText');
-    if (logoText) logoText.classList.remove('opacity-0','hidden');
-
-    const sidebarTexts = document.querySelectorAll('.sidebar-text');
-    sidebarTexts.forEach(text => text.classList.remove('hidden'));
-
-    // Tutup semua submenu desktop & mobile
+    sidebar?.classList.replace('w-16','w-64');
+    document.getElementById('logoText')?.classList.remove('opacity-0','hidden');
+    document.querySelectorAll('.sidebar-text').forEach(t => t.classList.remove('hidden'));
     closeAllSubmenus();
     document.querySelectorAll("[id^='mobile-'][id$='-submenu']").forEach(el => el.classList.add("hidden"));
     document.querySelectorAll("[id^='mobile-'][id$='-arrow']").forEach(el => el.classList.remove("rotate-180"));
 
-    // ===== Reset dark mode =====
+    // Reset dark mode
     initializeDarkMode();
 
-    // ===== Optional: Reset mobile overlay =====
+    // Reset mobile overlay
     const mobileOverlay = document.getElementById('mobileOverlay');
     if (mobileOverlay) {
         mobileOverlay.classList.add('hidden');
         document.body.style.overflow = 'auto';
     }
 }
+
 
 
 // ===== DARK MODE FUNCTIONS =====
