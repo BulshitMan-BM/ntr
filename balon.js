@@ -894,3 +894,86 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('Authentication System Initialized');
 });
+
+// ===== DASHBOARD SYSTEM =====
+let isCollapsed = false;
+
+// ===== DASHBOARD FUNCTIONS =====
+function loadDashboard(user) {
+    const loginContainer = document.getElementById('loginContainer');
+    const dashboardContainer = document.getElementById('dashboardContainer');
+    
+    // Clear all OTP-related timers when entering dashboard
+    if (typeof resendTimer !== 'undefined' && resendTimer) {
+        clearInterval(resendTimer);
+        resendTimer = null;
+    }
+    if (typeof otpExpiryTimer !== 'undefined' && otpExpiryTimer) {
+        clearInterval(otpExpiryTimer);
+        otpExpiryTimer = null;
+    }
+    
+    if (loginContainer) loginContainer.classList.add('hidden');
+    if (dashboardContainer) dashboardContainer.classList.remove('hidden');
+    
+    localStorage.setItem('isLoggedIn', 'true');
+    if (typeof currentUser !== 'undefined') {
+        currentUser = user;
+    }
+    
+    // Update user info in dashboard
+    updateUserInfo(user);
+    
+    // Initialize sidebar components
+    initializeSidebarComponents();
+    
+    // Initialize dashboard dark mode
+    initializeDashboardDarkMode();
+}
+
+function updateUserInfo(user) {
+    const userName = user?.Username || user?.name || user?.nama || 'User';
+    const userRole = user?.Role || user?.role || user?.jabatan || 'Member';
+    const avatarUrl = user?.ProfilAvatar || null;
+    
+    // Update all user name elements
+    const userNameElements = [
+        'userNameSidebar',
+        'userNameMobile', 
+        'userNameWelcome'
+    ];
+    
+    userNameElements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = userName;
+    });
+    
+    // Update role elements
+    const userRoleElements = [
+        'userRoleSidebar',
+        'userRoleMobile'
+    ];
+    
+    userRoleElements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element) element.textContent = userRole;
+    });
+    
+    // Update profile images
+    const profileImageElements = [
+        'sidebarProfileImage',
+        'mobileProfileImage'
+    ];
+    
+    profileImageElements.forEach(id => {
+        const element = document.getElementById(id);
+        if (element && avatarUrl) {
+            // Use the proxy service for avatar images
+            const proxyAvatarUrl = `https://test.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(avatarUrl)}`;
+            element.innerHTML = `<img src="${proxyAvatarUrl}" alt="Profile" class="w-full h-full rounded-full object-cover" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class="fas fa-user text-white text-sm"></i>';">`;
+        } else if (element) {
+            // Keep default icon if no avatar URL
+            element.innerHTML = '<i class="fas fa-user text-white text-sm"></i>';
+        }
+    });
+}
