@@ -544,15 +544,14 @@ async function handleLogin(event) {
                 localStorage.setItem("userEmail", userEmail);
             }
             
-            showInlineMessage('loginForm', data.message || 'Login berhasil! Mengirim OTP...', 'success');
-            
-            // Smooth transition to OTP form
-            setTimeout(() => {
-                showOTPForm(userEmail);
-                // Start with initial cooldown
-                startResendCooldown(getNextResendCooldown());
-            }, 1500);
-        } else {
+               showInlineMessage('loginForm', data.message || 'Login berhasil! Mengirim OTP...', 'success');
+    
+    setTimeout(() => {
+        showOTPForm(userEmail);
+        startResendCooldown(getNextResendCooldown());
+    }, 1500);
+}
+        else {
             showInlineMessage('loginForm', data.message || 'Login gagal. Periksa NIK dan password Anda.', 'error');
             
             // Shake animation for error
@@ -767,7 +766,8 @@ function showOTPForm(email = null) {
         maskedEmailElement.classList.remove('text-blue-600', 'dark:text-blue-400');
         maskedEmailElement.classList.add('text-gray-500');
     }
-
+    clearOTPInputs();   // reset input setiap kali form muncul
+    resetOtpExpiry();   // reset timer setiap kali form muncul
     loginForm.classList.add('hidden');
     otpForm.classList.remove('hidden');
     
