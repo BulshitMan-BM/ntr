@@ -1001,37 +1001,57 @@ function initializeSidebarComponents() {
 
     if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'none';
 
-    function toggleSidebar() {
-        isCollapsed = !isCollapsed;
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const header = document.getElementById('header');
+    const logoText = document.getElementById('logoText');
+    const sidebarTexts = document.querySelectorAll('.sidebar-text');
+    const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
+    const sidebarToggleHeader = document.getElementById('sidebarToggleHeader');
 
-        if (isCollapsed) {
-            sidebar?.classList.replace('w-64','w-16');
-            logoText?.classList.add('opacity-0','hidden');
-            sidebarTexts.forEach(t => t.classList.add('hidden'));
-            if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right text-sm"></i>';
-            if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'block';
-            if (header) {
-                header.style.marginLeft = '-4rem';
-                header.style.zIndex = '30';
-            }
+    if (!sidebar) return;
+
+    isCollapsed = !isCollapsed;
+
+    if (isCollapsed) {
+        // === Collapsed ===
+        sidebar.classList.replace('w-64', 'w-16');
+        logoText?.classList.add('opacity-0','hidden');
+        sidebarTexts.forEach(t => t.classList.add('hidden'));
+        if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right text-sm"></i>';
+        if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'block';
+        if (header) {
+            header.style.marginLeft = '-4rem';
+            header.style.zIndex = '30';
+        }
+
+        // Tutup semua submenu saat collapse
+        closeAllSubmenus();
+
+        // Sembunyikan semua panah
+        document.querySelectorAll('#dtks-arrow,#usulan-arrow,#unduh-arrow,#dusun-arrow')
+            .forEach(a => a.style.display = 'none');
+
+    } else {
+        // === Expanded ===
+        sidebar.classList.replace('w-16','w-64');
+        setTimeout(() => {
+            logoText?.classList.remove('opacity-0','hidden');
+            sidebarTexts.forEach(t => t.classList.remove('hidden'));
+
+            // Tampilkan panah kembali
             document.querySelectorAll('#dtks-arrow,#usulan-arrow,#unduh-arrow,#dusun-arrow')
-              .forEach(a => a.style.display = 'none');
-        } else {
-            sidebar?.classList.replace('w-16','w-64');
-            setTimeout(() => {
-                logoText?.classList.remove('opacity-0','hidden');
-                sidebarTexts.forEach(t => t.classList.remove('hidden'));
-                document.querySelectorAll('#dtks-arrow,#usulan-arrow,#unduh-arrow,#dusun-arrow')
-                  .forEach(a => a.style.display = 'block');
-            },150);
-            if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left text-sm"></i>';
-            if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'none';
-            if (header) {
-                header.style.marginLeft = '0';
-                header.style.zIndex = '20';
-            }
+                .forEach(a => a.style.display = 'block');
+        }, 150);
+
+        if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left text-sm"></i>';
+        if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'none';
+        if (header) {
+            header.style.marginLeft = '0';
+            header.style.zIndex = '20';
         }
     }
+}
 
     if (sidebarToggleDesktop && !sidebarToggleDesktop.dataset.listener) {
         sidebarToggleDesktop.addEventListener('click', toggleSidebar);
