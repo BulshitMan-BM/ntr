@@ -1053,7 +1053,7 @@ function initializeSidebarComponents() {
     }
     window.addEventListener('resize', handleResize);
 }
-// ===== SUBMENU =====
+// ================== SUBMENU ==================
 function toggleSubmenu(menuId) {
     const submenu = document.getElementById(menuId + '-submenu');
     const arrow = document.getElementById(menuId + '-arrow');
@@ -1071,7 +1071,7 @@ function toggleSubmenu(menuId) {
                 arrow.classList.add('rotate-180');
             }, 300);
         }
-        return; // stop biar expand dulu selesai
+        return;
     }
 
     // Kalau sidebar sudah expanded → close semua submenu lain dulu
@@ -1089,10 +1089,8 @@ function closeAllSubmenus() {
     ['dtks','usulan','unduh','dusun'].forEach(menuId => {
         const submenu = document.getElementById(menuId + '-submenu');
         const arrow = document.getElementById(menuId + '-arrow');
-        if (submenu && arrow) {
-            submenu.classList.add('hidden');
-            arrow.classList.remove('rotate-180');
-        }
+        if (submenu) submenu.classList.add('hidden');
+        if (arrow) arrow.classList.remove('rotate-180');
     });
 }
 
@@ -1117,6 +1115,7 @@ function toggleMobileSubmenu(menuId) {
         arrow.classList.add("rotate-180");
     }
 }
+
 // ===== DARK MODE =====
 function initializeDashboardDarkMode() {
     const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
