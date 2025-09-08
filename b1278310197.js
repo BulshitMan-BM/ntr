@@ -551,18 +551,19 @@ async function handleOTPVerification(event) {
 
         const data = await response.json();
         
-        if (data.success) {
-            // Clear OTP expiry timer immediately on success
-            clearInterval(otpExpiryTimer);
-            
-            localStorage.setItem("user", JSON.stringify(data.user));
-            showInlineMessage('otpForm', data.message || 'Verifikasi berhasil! Mengarahkan ke dashboard...', 'success');
-            
-            // Wait a moment to show success message, then load dashboard
-            setTimeout(() => {
-                loadDashboard(data.user);
-            }, 1500);
-        } else {
+      if (data.success) {
+    clearInterval(otpExpiryTimer);
+    
+    localStorage.setItem("user", JSON.stringify(data.user));
+    localStorage.setItem('isLoggedIn', 'true'); // hanya setelah OTP
+    
+    showInlineMessage('otpForm', data.message || 'Verifikasi berhasil! Mengarahkan ke dashboard...', 'success');
+    
+    setTimeout(() => {
+        loadDashboard(data.user);
+    }, 1500);
+}
+else {
             showInlineMessage('otpForm', data.message || 'Kode OTP salah. Silakan coba lagi.', 'error');
             
             // Clear OTP inputs and highlight error
@@ -922,17 +923,16 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeDarkMode();
     initializeInputEnhancements();
 
-    const isLoggedIn = localStorage.getItem('isLoggedIn');
     const userData = localStorage.getItem('user');
     
-    if (isLoggedIn === 'true' && userData) {
+    if (userData) {
         try {
             const user = JSON.parse(userData);
-            loadDashboard(user);
+            loadDashboard(user); // ✅ hanya jika OTP sukses
         } catch (error) {
             console.error('Error parsing user data:', error);
-            localStorage.removeItem('isLoggedIn');
             localStorage.removeItem('user');
+            localStorage.removeItem('isLoggedIn');
         }
     }
 });
