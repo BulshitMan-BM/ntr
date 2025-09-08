@@ -967,10 +967,9 @@ function initializeInputEnhancements() {
 document.addEventListener('DOMContentLoaded', function() {
     initializeDarkMode();
     initializeInputEnhancements();
+    generateCaptcha();
 
-    generateCaptcha(); // 🔹 letakkan di sini supaya captcha muncul saat halaman siap
-
-    document.getElementById('captchaInput')?.addEventListener('input', ()=> {
+    document.getElementById('captchaInput')?.addEventListener('input', () => {
         if(document.getElementById('captchaInput').value.length >= 6) {
             verifyCaptcha();
         } else {
@@ -984,7 +983,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     document.getElementById('otpForm')?.addEventListener('submit', handleOTPVerification);
+
+    // ✅ Cek login state saat reload
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+
+    if (isLoggedIn && user) {
+        loadDashboard(user); // langsung tampilkan dashboard
+    }
 });
+
 
 
 // ================== DASHBOARD SYSTEM ==================
