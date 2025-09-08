@@ -895,7 +895,8 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Authentication System Initialized');
 });
 
-// ===== DASHBOARD SYSTEM =====let isCollapsed = false;
+// ===== DASHBOARD SYSTEM =====
+let isCollapsed = false;
 
 // ===== DASHBOARD FUNCTIONS =====
 function loadDashboard(user) {
