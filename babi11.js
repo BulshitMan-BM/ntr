@@ -903,6 +903,7 @@ function loadDashboard(user) {
     const loginContainer = document.getElementById('loginContainer');
     const dashboardContainer = document.getElementById('dashboardContainer');
     
+    // Clear all OTP-related timers when entering dashboard
     if (typeof resendTimer !== 'undefined' && resendTimer) {
         clearInterval(resendTimer);
         resendTimer = null;
@@ -920,8 +921,13 @@ function loadDashboard(user) {
         currentUser = user;
     }
     
+    // Update user info in dashboard
     updateUserInfo(user);
+    
+    // Initialize sidebar components
     initializeSidebarComponents();
+    
+    // Initialize dashboard dark mode
     initializeDashboardDarkMode();
 }
 
@@ -929,33 +935,51 @@ function updateUserInfo(user) {
     const userName = user?.Username || user?.name || user?.nama || 'User';
     const userRole = user?.Role || user?.role || user?.jabatan || 'Member';
     const avatarUrl = user?.ProfilAvatar || null;
-
-    const userNameElements = ['userNameSidebar','userNameMobile','userNameWelcome'];
+    
+    // Update all user name elements
+    const userNameElements = [
+        'userNameSidebar',
+        'userNameMobile', 
+        'userNameWelcome'
+    ];
+    
     userNameElements.forEach(id => {
         const element = document.getElementById(id);
         if (element) element.textContent = userName;
     });
     
-    const userRoleElements = ['userRoleSidebar','userRoleMobile'];
+    // Update role elements
+    const userRoleElements = [
+        'userRoleSidebar',
+        'userRoleMobile'
+    ];
+    
     userRoleElements.forEach(id => {
         const element = document.getElementById(id);
         if (element) element.textContent = userRole;
     });
     
-    const profileImageElements = ['sidebarProfileImage','mobileProfileImage'];
+    // Update profile images
+    const profileImageElements = [
+        'sidebarProfileImage',
+        'mobileProfileImage'
+    ];
+    
     profileImageElements.forEach(id => {
         const element = document.getElementById(id);
         if (element && avatarUrl) {
+            // Use the proxy service for avatar images
             const proxyAvatarUrl = `https://test.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(avatarUrl)}`;
-            element.innerHTML = `<img src="${proxyAvatarUrl}" alt="Profile" class="w-full h-full rounded-full object-cover" 
-              onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-user text-white text-sm\\"></i>';">`;
+            element.innerHTML = `<img src="${proxyAvatarUrl}" alt="Profile" class="w-full h-full rounded-full object-cover" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-user text-white text-sm\\"></i>';">`;
         } else if (element) {
+            // Keep default icon if no avatar URL
             element.innerHTML = '<i class="fas fa-user text-white text-sm"></i>';
         }
     });
 }
 
 function initializeSidebarComponents() {
+    // Sidebar elements
     const sidebar = document.getElementById('sidebar');
     const header = document.getElementById('header');
     const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
@@ -964,64 +988,89 @@ function initializeSidebarComponents() {
     const closeMobileMenuBtn = document.getElementById('closeMobileMenu');
     const logoText = document.getElementById('logoText');
     const sidebarTexts = document.querySelectorAll('.sidebar-text');
+    
+    // Get header toggle button reference
     const sidebarToggleHeader = document.getElementById('sidebarToggleHeader');
     
-    if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'none';
+    // Set initial state - hide header toggle when sidebar is expanded
+    if (sidebarToggleHeader) {
+        sidebarToggleHeader.style.display = 'none';
+    }
 
+    // Sidebar toggle function
     function toggleSidebar() {
         isCollapsed = !isCollapsed;
         
         if (isCollapsed) {
             sidebar.classList.remove('w-64');
             sidebar.classList.add('w-16');
-            logoText.classList.add('opacity-0','hidden');
+            logoText.classList.add('opacity-0', 'hidden');
             sidebarTexts.forEach(text => text.classList.add('hidden'));
             sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right text-sm"></i>';
-            if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'block';
+            if (sidebarToggleHeader) {
+                sidebarToggleHeader.style.display = 'block';
+            }
             header.style.marginLeft = '-4rem';
             header.style.zIndex = '30';
             closeAllSubmenus();
-            document.querySelectorAll('#dtks-arrow,#usulan-arrow,#unduh-arrow,#dusun-arrow')
-              .forEach(arrow => arrow.style.display = 'none');
+            
+            // Hide dropdown arrows when collapsed
+            const dropdownArrows = document.querySelectorAll('#dtks-arrow, #usulan-arrow, #unduh-arrow, #dusun-arrow');
+            dropdownArrows.forEach(arrow => {
+                if (arrow) arrow.style.display = 'none';
+            });
         } else {
             sidebar.classList.remove('w-16');
             sidebar.classList.add('w-64');
             setTimeout(() => {
-                logoText.classList.remove('opacity-0','hidden');
+                logoText.classList.remove('opacity-0', 'hidden');
                 sidebarTexts.forEach(text => text.classList.remove('hidden'));
-                document.querySelectorAll('#dtks-arrow,#usulan-arrow,#unduh-arrow,#dusun-arrow')
-                  .forEach(arrow => arrow.style.display = 'block');
+                
+                // Show dropdown arrows when expanded
+                const dropdownArrows = document.querySelectorAll('#dtks-arrow, #usulan-arrow, #unduh-arrow, #dusun-arrow');
+                dropdownArrows.forEach(arrow => {
+                    if (arrow) arrow.style.display = 'block';
+                });
             }, 150);
             sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left text-sm"></i>';
-            if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'none';
+            if (sidebarToggleHeader) {
+                sidebarToggleHeader.style.display = 'none';
+            }
             header.style.marginLeft = '0';
             header.style.zIndex = '20';
         }
     }
 
-    if (sidebarToggleDesktop) sidebarToggleDesktop.addEventListener('click', toggleSidebar);
-    if (sidebarToggleHeader) sidebarToggleHeader.addEventListener('click', toggleSidebar);
+    // Desktop sidebar toggle (from sidebar)
+    if (sidebarToggleDesktop) {
+        sidebarToggleDesktop.addEventListener('click', toggleSidebar);
+    }
 
+    // Header sidebar toggle (from header)
+    if (sidebarToggleHeader) {
+        sidebarToggleHeader.addEventListener('click', toggleSidebar);
+    }
+
+    // Mobile menu toggle
     if (sidebarToggleMobile) {
         sidebarToggleMobile.addEventListener('click', function() {
-            sidebar.classList.remove('hidden');
             mobileOverlay.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         });
     }
 
+    // Close mobile menu
     if (closeMobileMenuBtn) {
         closeMobileMenuBtn.addEventListener('click', function() {
-            sidebar.classList.add('hidden');
             mobileOverlay.classList.add('hidden');
             document.body.style.overflow = 'auto';
         });
     }
 
+    // Close mobile menu when clicking overlay
     if (mobileOverlay) {
         mobileOverlay.addEventListener('click', function(e) {
             if (e.target === mobileOverlay) {
-                sidebar.classList.add('hidden');
                 mobileOverlay.classList.add('hidden');
                 document.body.style.overflow = 'auto';
             }
@@ -1047,6 +1096,7 @@ function handleResize() {
 function toggleSubmenu(menuId) {
     const submenu = document.getElementById(menuId + '-submenu');
     const arrow = document.getElementById(menuId + '-arrow');
+    
     if (submenu && arrow) {
         if (submenu.classList.contains('hidden')) {
             submenu.classList.remove('hidden');
@@ -1059,7 +1109,8 @@ function toggleSubmenu(menuId) {
 }
 
 function closeAllSubmenus() {
-    ['dtks','usulan','unduh','dusun'].forEach(menuId => {
+    const allSubmenus = ['dtks', 'usulan', 'unduh', 'dusun'];
+    allSubmenus.forEach(menuId => {
         const submenu = document.getElementById(menuId + '-submenu');
         const arrow = document.getElementById(menuId + '-arrow');
         if (submenu && arrow) {
@@ -1071,6 +1122,7 @@ function closeAllSubmenus() {
 
 function handleMenuClick(menuId) {
     if (isCollapsed) {
+        // Expand sidebar first, then open submenu
         const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
         if (sidebarToggleDesktop) {
             sidebarToggleDesktop.click();
@@ -1082,31 +1134,42 @@ function handleMenuClick(menuId) {
     } else {
         const currentSubmenu = document.getElementById(menuId + '-submenu');
         const isCurrentOpen = currentSubmenu && !currentSubmenu.classList.contains('hidden');
+        
         closeAllSubmenus();
-        if (!isCurrentOpen) toggleSubmenu(menuId);
+        
+        if (!isCurrentOpen) {
+            toggleSubmenu(menuId);
+        }
     }
 }
 
 function initializeDashboardDarkMode() {
     const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
+    
+    // Check saved theme preference
     const savedTheme = localStorage.getItem('theme') || 'light';
+    
     if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark');
         updateDashboardDarkModeIcons(true);
     }
+
     function toggleDarkMode() {
         const isDark = document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
         updateDashboardDarkModeIcons(isDark);
     }
+
     if (dashboardDarkModeToggle) {
         dashboardDarkModeToggle.addEventListener('click', toggleDarkMode);
     }
 }
 
 function updateDashboardDarkModeIcons(isDark) {
+    // Dashboard icons
     const dashboardMoonIcon = document.getElementById('dashboardMoonIcon');
     const dashboardSunIcon = document.getElementById('dashboardSunIcon');
+    
     if (dashboardMoonIcon && dashboardSunIcon) {
         dashboardMoonIcon.style.display = isDark ? 'none' : 'block';
         dashboardSunIcon.style.display = isDark ? 'block' : 'none';
@@ -1114,5 +1177,4 @@ function updateDashboardDarkModeIcons(isDark) {
 }
 
 console.log('Dashboard System Initialized');
-
 
