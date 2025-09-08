@@ -781,6 +781,7 @@ function backToLogin() {
 
 
 
+// ====== LOGOUT ======
 function logout() {
     try {
         // Tampilkan login, sembunyikan dashboard
@@ -788,7 +789,8 @@ function logout() {
         document.getElementById('dashboardContainer')?.classList.add('hidden');
 
         // Reset login & OTP form
-        backToLogin(); // pastikan semua input OTP kosong & tombol siap pakai
+        backToLogin(); 
+        clearOTPInputs();
 
         // Hentikan semua timer
         resendTimer && clearInterval(resendTimer);
@@ -796,9 +798,8 @@ function logout() {
         resendTimer = otpExpiryTimer = null;
 
         // Reset localStorage / sessionStorage
-        ['nik','userEmail','user','isLoggedIn', 'otpValue'].forEach(k => localStorage.removeItem(k));
+        ['nik','userEmail','user','isLoggedIn', 'otpValue','theme'].forEach(k => localStorage.removeItem(k));
         sessionStorage.clear();
-        clearOTPInputs();
 
         // Reset state global
         currentUser = null;
@@ -810,8 +811,16 @@ function logout() {
         // Pastikan tombol OTP tidak loading
         setButtonLoading('otpButton', 'otpIcon', 'otpText', false);
 
-        // Reset dark mode & sidebar/menu
-        initializeDarkMode();
+        // Reset dark mode: hapus listener lama dengan cloneNode
+        const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
+        if (dashboardDarkModeToggle) {
+            const newToggle = dashboardDarkModeToggle.cloneNode(true);
+            dashboardDarkModeToggle.replaceWith(newToggle);
+        }
+        document.documentElement.classList.remove('dark');
+        updateDashboardDarkModeIcons(false);
+
+        // Reset sidebar/menu
         const sidebar = document.getElementById('sidebar');
         sidebar?.classList.replace('w-16', 'w-64');
         document.getElementById('logoText')?.classList.remove('opacity-0','hidden');
@@ -945,7 +954,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
-// ================== DASHBOARD SYSTEM ==================
+// ====== LOAD DASHBOARD ======
 function loadDashboard(user) {
     const loginContainer = document.getElementById('loginContainer');
     const dashboardContainer = document.getElementById('dashboardContainer');
@@ -953,8 +962,8 @@ function loadDashboard(user) {
     if (resendTimer) clearInterval(resendTimer);
     if (otpExpiryTimer) clearInterval(otpExpiryTimer);
 
-    if (loginContainer) loginContainer.classList.add('hidden');
-    if (dashboardContainer) dashboardContainer.classList.remove('hidden');
+    loginContainer?.classList.add('hidden');
+    dashboardContainer?.classList.remove('hidden');
 
     localStorage.setItem('isLoggedIn', 'true');
     currentUser = user;
@@ -962,7 +971,7 @@ function loadDashboard(user) {
     updateUserInfo(user);
     initializeSidebarComponents();
 
-    // Panggil dashboard dark mode, bukan login dark mode
+    // Pasang dark mode listener yang baru
     initializeDashboardDarkMode();
 }
 
@@ -1172,24 +1181,28 @@ function toggleMobileSubmenu(menuId) {
     }
 }
 
-// ===== DARK MODE =====
+// ====== DASHBOARD DARK MODE ======
 function initializeDashboardDarkMode() {
-const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
-if (dashboardDarkModeToggle) dashboardDarkModeToggle.dataset.listener = "";
+    const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
+    if (!dashboardDarkModeToggle) return;
+
     const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark');
         updateDashboardDarkModeIcons(true);
+    } else {
+        document.documentElement.classList.remove('dark');
+        updateDashboardDarkModeIcons(false);
     }
+
     function toggleDarkMode() {
         const isDark = document.documentElement.classList.toggle('dark');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
         updateDashboardDarkModeIcons(isDark);
     }
-if (dashboardDarkModeToggle && !dashboardDarkModeToggle.dataset.listener) {
+
+    // Pasang listener baru
     dashboardDarkModeToggle.addEventListener('click', toggleDarkMode);
-    dashboardDarkModeToggle.dataset.listener = "true";
-}
 }
 
 function updateDashboardDarkModeIcons(isDark) {
