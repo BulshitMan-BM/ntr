@@ -1088,6 +1088,27 @@ function closeAllSubmenus() {
     });
 }
 
+function toggleMobileSubmenu(menuId) {
+    const submenu = document.getElementById(`mobile-${menuId}-submenu`);
+    const arrow = document.getElementById(`mobile-${menuId}-arrow`);
+    if (!submenu || !arrow) return;
+
+    const isCurrentlyOpen = !submenu.classList.contains("hidden");
+
+    // Tutup semua submenu lain
+    document.querySelectorAll("[id^='mobile-'][id$='-submenu']").forEach(el => {
+        el.classList.add("hidden");
+    });
+    document.querySelectorAll("[id^='mobile-'][id$='-arrow']").forEach(el => {
+        el.classList.remove("rotate-180");
+    });
+
+    // Kalau submenu ini tertutup → buka
+    if (!isCurrentlyOpen) {
+        submenu.classList.remove("hidden");
+        arrow.classList.add("rotate-180");
+    }
+}
 // ===== DARK MODE =====
 function initializeDashboardDarkMode() {
     const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
