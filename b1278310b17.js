@@ -758,71 +758,52 @@ function backToLogin() {
 }
 
 function logout() {
-    // Reset containers
-    document.getElementById('loginContainer')?.classList.remove('hidden');
-    document.getElementById('dashboardContainer')?.classList.add('hidden');
-    document.getElementById('loginForm')?.classList.remove('hidden');
-    document.getElementById('otpForm')?.classList.add('hidden');
+    try {
+        // Reset UI
+        document.getElementById('loginContainer')?.classList.remove('hidden');
+        document.getElementById('dashboardContainer')?.classList.add('hidden');
+        backToLogin(); // Pakai fungsi backToLogin untuk reset OTP & login form
 
-    // Clear storage
-    localStorage.clear();
-    sessionStorage.clear();  // Tambahkan sessionStorage
+        // Clear storage
+        localStorage.clear();
+        sessionStorage.clear();
 
-    // Reset global vars
-    currentUser = null;
-    resendAttempts = 0;
-    otpExpiryTime = OTP_EXPIRY_TIME;
-    isCollapsed = false;
+        // Reset global state
+        currentUser = null;
+        resendAttempts = 0;
+        otpExpiryTime = OTP_EXPIRY_TIME;
+        isCollapsed = false;
 
-    // Stop timers
-    clearInterval(resendTimer);
-    clearInterval(otpExpiryTimer);
-    resendTimer = null;
-    otpExpiryTimer = null;
+        // Stop timers
+        [resendTimer, otpExpiryTimer].forEach(t => {
+            if (t) clearInterval(t);
+        });
+        resendTimer = otpExpiryTimer = null;
 
-    // Reset inputs
-    document.getElementById('nik')?.value = '';
-    document.getElementById('password')?.value = '';
-    clearOTPInputs();
+        // Reset dark mode
+        initializeDarkMode();
 
-    // Reset buttons
-    const otpButton = document.getElementById('otpButton');
-    if (otpButton) {
-        otpButton.disabled = false;
-        otpButton.classList.remove('opacity-50', 'cursor-not-allowed');
-    }
-    const resendBtn = document.getElementById('resendBtn');
-    if (resendBtn) {
-        resendBtn.disabled = false;
-        resendBtn.textContent = 'Kirim Ulang OTP';
-    }
+        // Reset sidebar
+        const sidebar = document.getElementById('sidebar');
+        sidebar?.classList.replace('w-16', 'w-64');
+        document.getElementById('logoText')?.classList.remove('opacity-0','hidden');
+        document.querySelectorAll('.sidebar-text').forEach(t => t.classList.remove('hidden'));
+        closeAllSubmenus();
+        document.querySelectorAll("[id^='mobile-'][id$='-submenu']").forEach(el => el.classList.add("hidden"));
+        document.querySelectorAll("[id^='mobile-'][id$='-arrow']").forEach(el => el.classList.remove("rotate-180"));
 
-    // Reset countdown
-    const countdown = document.getElementById('otpExpiryCountdown');
-    if (countdown) {
-        countdown.textContent = "1:00";
-        countdown.parentElement.className = "mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium";
-    }
+        // Reset mobile overlay
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        if (mobileOverlay) {
+            mobileOverlay.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
 
-    // Reset sidebar & submenu
-    const sidebar = document.getElementById('sidebar');
-    sidebar?.classList.replace('w-16','w-64');
-    document.getElementById('logoText')?.classList.remove('opacity-0','hidden');
-    document.querySelectorAll('.sidebar-text').forEach(t => t.classList.remove('hidden'));
-    closeAllSubmenus();
-    document.querySelectorAll("[id^='mobile-'][id$='-submenu']").forEach(el => el.classList.add("hidden"));
-    document.querySelectorAll("[id^='mobile-'][id$='-arrow']").forEach(el => el.classList.remove("rotate-180"));
-
-    // Reset dark mode
-    initializeDarkMode();
-
-    // Reset mobile overlay
-    const mobileOverlay = document.getElementById('mobileOverlay');
-    if (mobileOverlay) {
-        mobileOverlay.classList.add('hidden');
-        document.body.style.overflow = 'auto';
+    } catch (err) {
+        console.error('Logout error:', err);
     }
 }
+
 
 // ===== DARK MODE FUNCTIONS =====
 function initializeDarkMode() {
