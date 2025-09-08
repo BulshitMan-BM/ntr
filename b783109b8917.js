@@ -13,6 +13,7 @@ let otpExpiryTime = OTP_EXPIRY_TIME;
 let isCollapsed = false; // ✅ cukup sekali di sini
 let currentCaptcha = '';
 let captchaVerified = false;
+let isSubmittingOTP = false;
 function createDistortedTextPattern() { /* ... gunakan fungsi canvas seperti sebelumnya ... */ }
 function getRandomBackgroundImage() { return createDistortedTextPattern(); }
 
@@ -838,7 +839,10 @@ function logout() {
             if (t) clearInterval(t);
         });
         resendTimer = otpExpiryTimer = null;
-
+localStorage.removeItem('nik');
+localStorage.removeItem('userEmail');
+localStorage.removeItem('user');
+localStorage.removeItem('isLoggedIn');
 localStorage.clear();
 sessionStorage.clear();
 currentUser = null;
