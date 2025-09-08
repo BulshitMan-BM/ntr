@@ -757,6 +757,7 @@ function backToLogin() {
 }
 
 function logout() {
+    // ===== Reset containers =====
     const loginContainer = document.getElementById('loginContainer');
     const dashboardContainer = document.getElementById('dashboardContainer');
     const loginForm = document.getElementById('loginForm');
@@ -767,50 +768,75 @@ function logout() {
     if (loginForm) loginForm.classList.remove('hidden');
     if (otpForm) otpForm.classList.add('hidden');
 
-    // 🔴 Clear semua data session
+    // ===== Clear session & global state =====
     localStorage.clear();
     currentUser = null;
 
-    // 🔴 Reset semua timer
+    // ===== Reset timers =====
     clearInterval(resendTimer);
     clearInterval(otpExpiryTimer);
     resendTimer = null;
     otpExpiryTimer = null;
 
-    // 🔴 Reset counter dan expiry
+    // ===== Reset counters & expiry =====
     resendAttempts = 0;
     otpExpiryTime = OTP_EXPIRY_TIME;
 
-    // 🔴 Reset input login & OTP
+    // ===== Reset login & OTP inputs =====
     const nikInput = document.getElementById('nik');
     const passwordInput = document.getElementById('password');
     if (nikInput) nikInput.value = '';
     if (passwordInput) passwordInput.value = '';
     clearOTPInputs();
 
-    // 🔴 Reset tombol OTP
+    // ===== Reset buttons =====
     const otpButton = document.getElementById('otpButton');
     if (otpButton) {
         otpButton.disabled = false;
         otpButton.classList.remove('opacity-50', 'cursor-not-allowed');
     }
 
-    // 🔴 Reset tombol Kirim Ulang OTP
     const resendBtn = document.getElementById('resendBtn');
     if (resendBtn) {
         resendBtn.disabled = false;
         resendBtn.textContent = 'Kirim Ulang OTP';
     }
 
-    // 🔴 Reset countdown text
+    // ===== Reset OTP countdown =====
     const countdownElement = document.getElementById("otpExpiryCountdown");
     if (countdownElement) {
         countdownElement.textContent = "1:00";
         countdownElement.parentElement.className = "mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium";
     }
 
-    // 🔴 Re-init dark mode toggle setelah logout
+    // ===== Reset sidebar state =====
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.classList.remove('w-16');
+        sidebar.classList.add('w-64');
+        isCollapsed = false;
+    }
+
+    const logoText = document.getElementById('logoText');
+    if (logoText) logoText.classList.remove('opacity-0','hidden');
+
+    const sidebarTexts = document.querySelectorAll('.sidebar-text');
+    sidebarTexts.forEach(text => text.classList.remove('hidden'));
+
+    // Tutup semua submenu desktop & mobile
+    closeAllSubmenus();
+    document.querySelectorAll("[id^='mobile-'][id$='-submenu']").forEach(el => el.classList.add("hidden"));
+    document.querySelectorAll("[id^='mobile-'][id$='-arrow']").forEach(el => el.classList.remove("rotate-180"));
+
+    // ===== Reset dark mode =====
     initializeDarkMode();
+
+    // ===== Optional: Reset mobile overlay =====
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    if (mobileOverlay) {
+        mobileOverlay.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
 }
 
 
