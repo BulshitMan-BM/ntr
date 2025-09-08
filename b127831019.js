@@ -953,7 +953,9 @@ function loadDashboard(user) {
 
     updateUserInfo(user);
     initializeSidebarComponents();
-    initializeDarkMode();
+
+    // Panggil dashboard dark mode, bukan login dark mode
+    initializeDashboardDarkMode();
 }
 
 function updateUserInfo(user) {
