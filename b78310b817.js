@@ -826,12 +826,20 @@ function backToLogin() {
 
 function logout() {
     try {
-        // Reset UI
+        // Tampilkan login, sembunyikan dashboard
         document.getElementById('loginContainer')?.classList.remove('hidden');
         document.getElementById('dashboardContainer')?.classList.add('hidden');
-        backToLogin(); // Pakai fungsi backToLogin untuk reset OTP & login form
 
-        // Clear storage
+        // Reset login & OTP form
+        backToLogin(); // ini sudah reset OTP, resend, dan input form
+        
+        // Hentikan semua timer
+        [resendTimer, otpExpiryTimer].forEach(t => {
+            if (t) clearInterval(t);
+        });
+        resendTimer = otpExpiryTimer = null;
+
+        // Bersihkan semua storage
         localStorage.clear();
         sessionStorage.clear();
 
@@ -841,16 +849,10 @@ function logout() {
         otpExpiryTime = OTP_EXPIRY_TIME;
         isCollapsed = false;
 
-        // Stop timers
-        [resendTimer, otpExpiryTimer].forEach(t => {
-            if (t) clearInterval(t);
-        });
-        resendTimer = otpExpiryTimer = null;
-
-        // Reset dark mode
+        // Reset dark mode (opsional, tetap pakai preferensi)
         initializeDarkMode();
 
-        // Reset sidebar
+        // Reset sidebar & menu
         const sidebar = document.getElementById('sidebar');
         sidebar?.classList.replace('w-16', 'w-64');
         document.getElementById('logoText')?.classList.remove('opacity-0','hidden');
@@ -866,10 +868,14 @@ function logout() {
             document.body.style.overflow = 'auto';
         }
 
+        // 🔹 Reset captcha saat logout
+        generateCaptcha();
+
     } catch (err) {
         console.error('Logout error:', err);
     }
 }
+
 
 
 // ===== DARK MODE FUNCTIONS =====
