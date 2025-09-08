@@ -1027,20 +1027,21 @@ function initializeSidebarComponents() {
         });
     }
 
-    function handleResize() {
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
-            sidebar.classList.add('hidden');
-        } else {
-            sidebar.classList.remove('hidden');
-        }
-        if (!isMobile && mobileOverlay) {
-            mobileOverlay.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
+function handleResize() {
+    const isMobile = window.innerWidth < 768;
+
+    if (isMobile) {
+        sidebar.classList.add('hidden');
+    } else {
+        sidebar.classList.remove('hidden');
     }
-    window.addEventListener('resize', handleResize);
+
+    if (!isMobile && mobileOverlay) {
+        mobileOverlay.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
 }
+
 
 function toggleSubmenu(menuId) {
     const submenu = document.getElementById(menuId + '-submenu');
