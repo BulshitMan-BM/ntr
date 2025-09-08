@@ -10,6 +10,7 @@ let resendTimer = null;
 let otpExpiryTimer = null;
 let resendAttempts = 0;
 let otpExpiryTime = OTP_EXPIRY_TIME;
+let isCollapsed = false; // ✅ cukup sekali di sini
 
 // ===== UTILITY FUNCTIONS =====
 function maskEmail(email) {
@@ -890,15 +891,11 @@ function initializeInputEnhancements() {
     }
 }
 
-// ===== INITIALIZATION =====
+// ================== INITIALIZATION ==================
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize dark mode
     initializeDarkMode();
-    
-    // Initialize input enhancements
     initializeInputEnhancements();
 
-    // Check if user is already logged in
     const isLoggedIn = localStorage.getItem('isLoggedIn');
     const userData = localStorage.getItem('user');
     
@@ -912,14 +909,9 @@ document.addEventListener('DOMContentLoaded', function() {
             localStorage.removeItem('user');
         }
     }
-
 });
 
-// ===== DASHBOARD SYSTEM =====
-// ===== DASHBOARD SYSTEM =====
-let isCollapsed = false;
-
-// ===== DASHBOARD FUNCTIONS =====
+// ================== DASHBOARD SYSTEM ==================
 function loadDashboard(user) {
     const loginContainer = document.getElementById('loginContainer');
     const dashboardContainer = document.getElementById('dashboardContainer');
@@ -934,46 +926,40 @@ function loadDashboard(user) {
     currentUser = user;
 
     updateUserInfo(user);
-
-    // 🔴 Pastikan listener sidebar & dark mode dipasang ulang setiap masuk dashboard
     initializeSidebarComponents();
     initializeDarkMode();
 }
-
 
 function updateUserInfo(user) {
     const userName = user?.Username || user?.name || user?.nama || 'User';
     const userRole = user?.Role || user?.role || user?.jabatan || 'Member';
     const avatarUrl = user?.ProfilAvatar || null;
 
-    const userNameElements = ['userNameSidebar','userNameMobile','userNameWelcome'];
-    userNameElements.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) element.textContent = userName;
+    ['userNameSidebar','userNameMobile','userNameWelcome'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = userName;
     });
-    
-    const userRoleElements = ['userRoleSidebar','userRoleMobile'];
-    userRoleElements.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) element.textContent = userRole;
+
+    ['userRoleSidebar','userRoleMobile'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = userRole;
     });
-    
-    const profileImageElements = ['sidebarProfileImage','mobileProfileImage'];
-    profileImageElements.forEach(id => {
-        const element = document.getElementById(id);
-        if (element && avatarUrl) {
-            const proxyAvatarUrl = `https://test.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(avatarUrl)}`;
-            element.innerHTML = `<img src="${proxyAvatarUrl}" alt="Profile" class="w-full h-full rounded-full object-cover" 
-              onerror="this.style.display='none'; this.parentElement.innerHTML='<i class="fas fa-user text-white text-sm"></i>`;
-        } else if (element) {
-            element.innerHTML = '<i class="fas fa-user text-white text-sm"></i>';
+
+    ['sidebarProfileImage','mobileProfileImage'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            if (avatarUrl) {
+                const proxyUrl = `https://test.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(avatarUrl)}`;
+                el.innerHTML = `<img src="${proxyUrl}" alt="Profile" class="w-full h-full rounded-full object-cover" 
+                    onerror="this.parentElement.innerHTML='<i class=\\'fas fa-user text-white text-sm\\'></i>'">`;
+            } else {
+                el.innerHTML = '<i class="fas fa-user text-white text-sm"></i>';
+            }
         }
     });
 }
 
-// === GLOBAL STATE ===
-let isCollapsed = false; // ✅ pindah ke global
-
+// ================== SIDEBAR ==================
 function initializeSidebarComponents() {
     const sidebar = document.getElementById('sidebar');
     const header = document.getElementById('header');
@@ -988,31 +974,28 @@ function initializeSidebarComponents() {
     if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'none';
 
     function toggleSidebar() {
-        isCollapsed = !isCollapsed; // ✅ selalu update global state
+        isCollapsed = !isCollapsed;
 
         if (isCollapsed) {
-            sidebar?.classList.remove('w-64');
-            sidebar?.classList.add('w-16');
+            sidebar?.classList.replace('w-64','w-16');
             logoText?.classList.add('opacity-0','hidden');
-            sidebarTexts.forEach(text => text.classList.add('hidden'));
+            sidebarTexts.forEach(t => t.classList.add('hidden'));
             if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right text-sm"></i>';
             if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'block';
             if (header) {
                 header.style.marginLeft = '-4rem';
                 header.style.zIndex = '30';
             }
-            closeAllSubmenus?.();
             document.querySelectorAll('#dtks-arrow,#usulan-arrow,#unduh-arrow,#dusun-arrow')
-              .forEach(arrow => arrow.style.display = 'none');
+              .forEach(a => a.style.display = 'none');
         } else {
-            sidebar?.classList.remove('w-16');
-            sidebar?.classList.add('w-64');
+            sidebar?.classList.replace('w-16','w-64');
             setTimeout(() => {
                 logoText?.classList.remove('opacity-0','hidden');
-                sidebarTexts.forEach(text => text.classList.remove('hidden'));
+                sidebarTexts.forEach(t => t.classList.remove('hidden'));
                 document.querySelectorAll('#dtks-arrow,#usulan-arrow,#unduh-arrow,#dusun-arrow')
-                  .forEach(arrow => arrow.style.display = 'block');
-            }, 150);
+                  .forEach(a => a.style.display = 'block');
+            },150);
             if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left text-sm"></i>';
             if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'none';
             if (header) {
@@ -1022,7 +1005,6 @@ function initializeSidebarComponents() {
         }
     }
 
-    // ✅ cegah listener ganda
     if (sidebarToggleDesktop && !sidebarToggleDesktop.dataset.listener) {
         sidebarToggleDesktop.addEventListener('click', toggleSidebar);
         sidebarToggleDesktop.dataset.listener = "true";
@@ -1031,27 +1013,24 @@ function initializeSidebarComponents() {
         sidebarToggleHeader.addEventListener('click', toggleSidebar);
         sidebarToggleHeader.dataset.listener = "true";
     }
-
     if (sidebarToggleMobile && !sidebarToggleMobile.dataset.listener) {
-        sidebarToggleMobile.addEventListener('click', function() {
+        sidebarToggleMobile.addEventListener('click', () => {
             sidebar?.classList.remove('hidden');
             mobileOverlay?.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         });
         sidebarToggleMobile.dataset.listener = "true";
     }
-
     if (closeMobileMenuBtn && !closeMobileMenuBtn.dataset.listener) {
-        closeMobileMenuBtn.addEventListener('click', function() {
+        closeMobileMenuBtn.addEventListener('click', () => {
             sidebar?.classList.add('hidden');
             mobileOverlay?.classList.add('hidden');
             document.body.style.overflow = 'auto';
         });
         closeMobileMenuBtn.dataset.listener = "true";
     }
-
     if (mobileOverlay && !mobileOverlay.dataset.listener) {
-        mobileOverlay.addEventListener('click', function(e) {
+        mobileOverlay.addEventListener('click', e => {
             if (e.target === mobileOverlay) {
                 sidebar?.classList.add('hidden');
                 mobileOverlay.classList.add('hidden');
@@ -1062,20 +1041,18 @@ function initializeSidebarComponents() {
     }
 
     function handleResize() {
-        const isMobile = window.innerWidth < 768;
-        if (isMobile) {
+        if (window.innerWidth < 768) {
             sidebar?.classList.add('hidden');
         } else {
             sidebar?.classList.remove('hidden');
         }
-        if (!isMobile && mobileOverlay) {
+        if (window.innerWidth >= 768 && mobileOverlay) {
             mobileOverlay.classList.add('hidden');
             document.body.style.overflow = 'auto';
         }
     }
     window.addEventListener('resize', handleResize);
 }
-
 // ===== SUBMENU =====
 function toggleSubmenu(menuId) {
     const submenu = document.getElementById(menuId + '-submenu');
