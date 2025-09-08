@@ -992,7 +992,7 @@ function initializeSidebarComponents() {
     // Get header toggle button reference
     const sidebarToggleHeader = document.getElementById('sidebarToggleHeader');
     
-    // Set initial state - hide header toggle when sidebar is expanded
+    // Set initial state
     if (sidebarToggleHeader) {
         sidebarToggleHeader.style.display = 'none';
     }
@@ -1007,7 +1007,7 @@ function initializeSidebarComponents() {
             logoText.classList.add('opacity-0', 'hidden');
             sidebarTexts.forEach(text => text.classList.add('hidden'));
             sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right text-sm"></i>';
-            if (sidebarToggleHeader) {
+            if (sidebarToggleHeader && window.innerWidth >= 768) {
                 sidebarToggleHeader.style.display = 'block';
             }
             header.style.marginLeft = '-4rem';
@@ -1081,12 +1081,28 @@ function initializeSidebarComponents() {
     function handleResize() {
         const isMobile = window.innerWidth < 768;
         
+        if (isMobile) {
+            // Sembunyikan tombol header toggle di mobile
+            if (sidebarToggleHeader) {
+                sidebarToggleHeader.style.display = 'none';
+            }
+        } else {
+            // Desktop: tombol header muncul hanya kalau sidebar collapsed
+            if (sidebarToggleHeader) {
+                sidebarToggleHeader.style.display = isCollapsed ? 'block' : 'none';
+            }
+        }
+
         if (!isMobile && mobileOverlay) {
             mobileOverlay.classList.add('hidden');
             document.body.style.overflow = 'auto';
         }
     }
 
+    // Panggil sekali waktu load
+    handleResize();
+
+    // Panggil lagi saat resize
     window.addEventListener('resize', handleResize);
 }
 
@@ -1174,3 +1190,4 @@ function updateDashboardDarkModeIcons(isDark) {
 }
 
 console.log('Dashboard System Initialized');
+
