@@ -256,7 +256,7 @@ function checkOTPComplete() {
     }
     
     // Auto-submit when all 6 digits are entered
-    if (otpValues.length === 6) {
+if (otpValues.length === 6 && otpValues.every(v => v !== '')){
         setTimeout(() => {
             const otpForm = document.querySelector('#otpForm form');
             if (otpForm) {
@@ -582,11 +582,11 @@ async function handleOTPVerification(event) {
     const nik = localStorage.getItem("nik");
     const otp = getOTPValue();
     
-    if (!nik) {
-        showInlineMessage('otpForm', 'Session expired. Silakan login ulang.', 'error');
-        setTimeout(() => backToLogin(), 2000);
-        return false;
-    }
+if (!nik) {
+    showInlineMessage('otpForm', 'Session expired. Silakan login ulang.', 'error');
+    setTimeout(() => backToLogin(), 2000);
+    return false;
+}
     
     if (!otp) {
         showInlineMessage('otpForm', 'Harap masukkan kode OTP', 'error');
@@ -789,41 +789,40 @@ function backToLogin() {
     otpForm.classList.add('hidden');
     loginForm.classList.remove('hidden');
     
-    // Clear data
-    localStorage.removeItem('nik');
-    localStorage.removeItem('userEmail');
-    
-    // Clear all timers
-    clearInterval(resendTimer);
-    clearInterval(otpExpiryTimer);
-    
-    // Reset counters
+    // Clear localStorage yang penting
+    ['nik', 'userEmail', 'isLoggedIn', 'user'].forEach(k => localStorage.removeItem(k));
+
+    // Reset global state
+    captchaVerified = false;
     resendAttempts = 0;
     otpExpiryTime = OTP_EXPIRY_TIME;
-    
-    // Clear OTP inputs and re-enable form elements
+
+    // Clear timers
+    resendTimer && clearInterval(resendTimer);
+    otpExpiryTimer && clearInterval(otpExpiryTimer);
+    resendTimer = otpExpiryTimer = null;
+
+    // Reset OTP inputs
     clearOTPInputs();
-    
     const otpButton = document.getElementById('otpButton');
     if (otpButton) {
         otpButton.disabled = false;
         otpButton.classList.remove('opacity-50', 'cursor-not-allowed');
     }
-    
-    // Reset resend button
+
+    // Reset resend button & countdown
     const resendBtn = document.getElementById('resendBtn');
     if (resendBtn) {
         resendBtn.disabled = false;
         resendBtn.textContent = 'Kirim Ulang OTP';
     }
-    
-    // Reset expiry display
     const countdownElement = document.getElementById("otpExpiryCountdown");
     if (countdownElement) {
         countdownElement.textContent = "1:00";
         countdownElement.parentElement.className = "mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium";
     }
 }
+
 
 function logout() {
     try {
@@ -832,30 +831,26 @@ function logout() {
         document.getElementById('dashboardContainer')?.classList.add('hidden');
 
         // Reset login & OTP form
-        backToLogin(); // ini sudah reset OTP, resend, dan input form
-        
+        backToLogin(); // sudah reset OTP & resend
+
         // Hentikan semua timer
-        [resendTimer, otpExpiryTimer].forEach(t => {
-            if (t) clearInterval(t);
-        });
+        resendTimer && clearInterval(resendTimer);
+        otpExpiryTimer && clearInterval(otpExpiryTimer);
         resendTimer = otpExpiryTimer = null;
-localStorage.removeItem('nik');
-localStorage.removeItem('userEmail');
-localStorage.removeItem('user');
-localStorage.removeItem('isLoggedIn');
-localStorage.clear();
-sessionStorage.clear();
-currentUser = null;
-resendAttempts = 0;
-otpExpiryTime = OTP_EXPIRY_TIME;
-captchaVerified = false;
-clearOTPInputs(); // pastikan semua input kosong
+
+        // Reset localStorage / sessionStorage yang penting saja
+        ['nik','userEmail','user','isLoggedIn'].forEach(k => localStorage.removeItem(k));
+        sessionStorage.clear();
+
+        // Reset state global
+        currentUser = null;
+        resendAttempts = 0;
+        otpExpiryTime = OTP_EXPIRY_TIME;
+        captchaVerified = false;
         isCollapsed = false;
 
-        // Reset dark mode (opsional, tetap pakai preferensi)
+        // Reset dark mode & sidebar/menu
         initializeDarkMode();
-
-        // Reset sidebar & menu
         const sidebar = document.getElementById('sidebar');
         sidebar?.classList.replace('w-16', 'w-64');
         document.getElementById('logoText')?.classList.remove('opacity-0','hidden');
@@ -871,9 +866,8 @@ clearOTPInputs(); // pastikan semua input kosong
             document.body.style.overflow = 'auto';
         }
 
-        // 🔹 Reset captcha saat logout
+        // Reset captcha
         generateCaptcha();
-
     } catch (err) {
         console.error('Logout error:', err);
     }
