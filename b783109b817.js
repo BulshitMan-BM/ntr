@@ -839,14 +839,13 @@ function logout() {
         });
         resendTimer = otpExpiryTimer = null;
 
-        // Bersihkan semua storage
-        localStorage.clear();
-        sessionStorage.clear();
-
-        // Reset global state
-        currentUser = null;
-        resendAttempts = 0;
-        otpExpiryTime = OTP_EXPIRY_TIME;
+localStorage.clear();
+sessionStorage.clear();
+currentUser = null;
+resendAttempts = 0;
+otpExpiryTime = OTP_EXPIRY_TIME;
+captchaVerified = false;
+clearOTPInputs(); // pastikan semua input kosong
         isCollapsed = false;
 
         // Reset dark mode (opsional, tetap pakai preferensi)
