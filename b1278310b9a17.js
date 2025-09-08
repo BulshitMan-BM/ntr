@@ -824,8 +824,6 @@ function logout() {
     }
 }
 
-
-
 // ===== DARK MODE FUNCTIONS =====
 function initializeDarkMode() {
     const darkModeToggle = document.getElementById('darkModeToggle');
@@ -1175,7 +1173,6 @@ function updateDashboardDarkModeIcons(isDark) {
         dashboardSunIcon.style.display = isDark ? 'block' : 'none';
     }
 }
-
 
 
 
