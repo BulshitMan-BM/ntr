@@ -11,7 +11,70 @@ let otpExpiryTimer = null;
 let resendAttempts = 0;
 let otpExpiryTime = OTP_EXPIRY_TIME;
 let isCollapsed = false; // ✅ cukup sekali di sini
+let currentCaptcha = '';
+let captchaVerified = false;
+function createDistortedTextPattern() { /* ... gunakan fungsi canvas seperti sebelumnya ... */ }
+function getRandomBackgroundImage() { return createDistortedTextPattern(); }
 
+function generateCaptcha() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    currentCaptcha = Array.from({length: 6}, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+
+    const captchaContainer = document.getElementById('captchaContainer');
+    const captchaDisplay = document.getElementById('captchaDisplay');
+    captchaContainer.style.backgroundImage = `url('${getRandomBackgroundImage()}')`;
+    captchaDisplay.style.backgroundImage = `url('${getRandomBackgroundImage()}')`;
+
+    const captchaText = document.getElementById('captchaText');
+    captchaText.innerHTML = '';
+    currentCaptcha.split('').forEach(c => {
+        const span = document.createElement('span');
+        span.textContent = c;
+        span.style.transform = `rotate(${Math.random() * 15 - 7.5}deg)`;
+        span.style.display = 'inline-block';
+        span.style.margin = '0 4px';
+        span.style.fontSize = '18px';
+        span.style.fontWeight = 'bold';
+        span.style.color = `hsl(${Math.random() * 360}, 80%, 40%)`;
+        span.style.textShadow = '2px 2px 4px rgba(0,0,0,0.9)';
+        captchaText.appendChild(span);
+    });
+
+    captchaVerified = false;
+    document.getElementById('captchaInput').value = '';
+    document.getElementById('captchaErrorIcon').classList.add('hidden', 'opacity-0');
+    document.getElementById('captchaSuccessIcon').classList.add('hidden', 'opacity-0');
+    document.getElementById('captchaInput').classList.remove('border-green-500', 'border-red-500');
+    document.getElementById('loginButton').disabled = true;
+}
+
+function verifyCaptcha() {
+    const input = document.getElementById('captchaInput').value;
+    const errorIcon = document.getElementById('captchaErrorIcon');
+    const successIcon = document.getElementById('captchaSuccessIcon');
+    const inputField = document.getElementById('captchaInput');
+    const loginButton = document.getElementById('loginButton');
+
+    if (input.toLowerCase() === currentCaptcha.toLowerCase()) {
+        captchaVerified = true;
+        errorIcon.classList.add('hidden','opacity-0');
+        successIcon.classList.remove('hidden','opacity-0');
+        inputField.classList.remove('border-red-500');
+        inputField.classList.add('border-green-500');
+        loginButton.disabled = false;
+        return true;
+    } else {
+        captchaVerified = false;
+        errorIcon.classList.remove('hidden','opacity-0');
+        successIcon.classList.add('hidden','opacity-0');
+        inputField.classList.remove('border-green-500');
+        inputField.classList.add('border-red-500');
+        loginButton.disabled = true;
+        inputField.style.animation = 'shake 0.5s ease-in-out';
+        setTimeout(() => inputField.style.animation = '', 500);
+        return false;
+    }
+}
 // ===== UTILITY FUNCTIONS =====
 function maskEmail(email) {
     if (!email || typeof email !== 'string' || !email.includes('@')) {
@@ -421,16 +484,20 @@ function handleOTPPaste(event) {
 }
 
 // ===== MAIN HANDLERS =====
+// ================== LOGIN SYSTEM ==================
 async function handleLogin(event) {
     event.preventDefault();
-    
+
+    if (!captchaVerified) {
+        showInlineMessage('loginForm', 'Harap verifikasi captcha terlebih dahulu', 'error');
+        return false;
+    }
+
     const nik = document.getElementById('nik')?.value?.trim();
     const password = document.getElementById('password')?.value?.trim();
-    
-    // Clear previous error states
+
     clearFieldErrors();
-    
-    // Validation
+
     if (!nik || !password) {
         showInlineMessage('loginForm', 'Harap isi semua field', 'error');
         if (!nik) highlightField('nik', true);
@@ -887,19 +954,24 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeDarkMode();
     initializeInputEnhancements();
 
-    const userData = localStorage.getItem('user');
-    
-    if (userData) {
-        try {
-            const user = JSON.parse(userData);
-            loadDashboard(user); // ✅ hanya jika OTP sukses
-        } catch (error) {
-            console.error('Error parsing user data:', error);
-            localStorage.removeItem('user');
-            localStorage.removeItem('isLoggedIn');
+    generateCaptcha(); // 🔹 letakkan di sini supaya captcha muncul saat halaman siap
+
+    document.getElementById('captchaInput')?.addEventListener('input', ()=> {
+        if(document.getElementById('captchaInput').value.length >= 6) {
+            verifyCaptcha();
+        } else {
+            captchaVerified = false;
+            document.getElementById('captchaErrorIcon').classList.add('hidden','opacity-0');
+            document.getElementById('captchaSuccessIcon').classList.add('hidden','opacity-0');
+            document.getElementById('captchaInput').classList.remove('border-green-500','border-red-500');
+            document.getElementById('loginButton').disabled = true;
         }
-    }
+    });
+
+    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+    document.getElementById('otpForm')?.addEventListener('submit', handleOTPVerification);
 });
+
 
 // ================== DASHBOARD SYSTEM ==================
 function loadDashboard(user) {
