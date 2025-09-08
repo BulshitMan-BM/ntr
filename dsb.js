@@ -1,45 +1,123 @@
+// Global variables
+let sidebarCollapsed = false;
+let currentUser = null;
 
+// Initialize dashboard when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDashboard();
+});
 
-// ===== DASHBOARD SYSTEM =====
-let isCollapsed = false;
-
-// ===== DASHBOARD FUNCTIONS =====
-function loadDashboard(user) {
-    const loginContainer = document.getElementById('loginContainer');
-    const dashboardContainer = document.getElementById('dashboardContainer');
+// Initialize dashboard functionality
+function initializeDashboard() {
+    // Set up event listeners
+    setupEventListeners();
     
-    // Clear all OTP-related timers when entering dashboard
-    if (typeof resendTimer !== 'undefined' && resendTimer) {
-        clearInterval(resendTimer);
-        resendTimer = null;
-    }
-    if (typeof otpExpiryTimer !== 'undefined' && otpExpiryTimer) {
-        clearInterval(otpExpiryTimer);
-        otpExpiryTimer = null;
-    }
+    // Initialize dark mode
+    initializeDarkMode();
     
-    if (loginContainer) loginContainer.classList.add('hidden');
-    if (dashboardContainer) dashboardContainer.classList.remove('hidden');
+    // Load user data if available
+    loadUserData();
     
-    localStorage.setItem('isLoggedIn', 'true');
-    if (typeof currentUser !== 'undefined') {
-        currentUser = user;
-    }
-    
-    // Update user info in dashboard
-    updateUserInfo(user);
-    
-    // Initialize sidebar components
-    initializeSidebarComponents();
-    
-    // Initialize dashboard dark mode
-    initializeDashboardDarkMode();
+    // Initialize sidebar state
+    initializeSidebar();
 }
 
-function updateUserInfo(user) {
-    const userName = user?.Username || user?.name || user?.nama || 'User';
-    const userRole = user?.Role || user?.role || user?.jabatan || 'Member';
-    const avatarUrl = user?.ProfilAvatar || null;
+// Setup all event listeners
+function setupEventListeners() {
+    // Sidebar toggle buttons
+    const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
+    const sidebarToggleHeader = document.getElementById('sidebarToggleHeader');
+    const sidebarToggleMobile = document.getElementById('sidebarToggleMobile');
+    const closeMobileMenu = document.getElementById('closeMobileMenu');
+    
+    if (sidebarToggleDesktop) {
+        sidebarToggleDesktop.addEventListener('click', toggleSidebar);
+    }
+    
+    if (sidebarToggleHeader) {
+        sidebarToggleHeader.addEventListener('click', toggleSidebar);
+    }
+    
+    if (sidebarToggleMobile) {
+        sidebarToggleMobile.addEventListener('click', toggleMobileMenu);
+    }
+    
+    if (closeMobileMenu) {
+        closeMobileMenu.addEventListener('click', closeMobileMenuHandler);
+    }
+    
+    // Dark mode toggle
+    const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
+    if (dashboardDarkModeToggle) {
+        dashboardDarkModeToggle.addEventListener('click', toggleDarkMode);
+    }
+    
+    // Close mobile menu when clicking outside
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    if (mobileOverlay) {
+        mobileOverlay.addEventListener('click', function(e) {
+            if (e.target === mobileOverlay) {
+                closeMobileMenuHandler();
+            }
+        });
+    }
+    
+    // Handle window resize
+    window.addEventListener('resize', handleWindowResize);
+}
+
+// Initialize dark mode
+function initializeDarkMode() {
+    const isDarkMode = localStorage.getItem('darkMode') === 'true';
+    const html = document.documentElement;
+    const dashboardMoonIcon = document.getElementById('dashboardMoonIcon');
+    const dashboardSunIcon = document.getElementById('dashboardSunIcon');
+    
+    if (isDarkMode) {
+        html.classList.add('dark');
+        if (dashboardMoonIcon) dashboardMoonIcon.style.display = 'none';
+        if (dashboardSunIcon) dashboardSunIcon.style.display = 'inline';
+    } else {
+        html.classList.remove('dark');
+        if (dashboardMoonIcon) dashboardMoonIcon.style.display = 'inline';
+        if (dashboardSunIcon) dashboardSunIcon.style.display = 'none';
+    }
+}
+
+// Toggle dark mode
+function toggleDarkMode() {
+    const html = document.documentElement;
+    const isDarkMode = html.classList.contains('dark');
+    const dashboardMoonIcon = document.getElementById('dashboardMoonIcon');
+    const dashboardSunIcon = document.getElementById('dashboardSunIcon');
+    
+    if (isDarkMode) {
+        html.classList.remove('dark');
+        localStorage.setItem('darkMode', 'false');
+        if (dashboardMoonIcon) dashboardMoonIcon.style.display = 'inline';
+        if (dashboardSunIcon) dashboardSunIcon.style.display = 'none';
+    } else {
+        html.classList.add('dark');
+        localStorage.setItem('darkMode', 'true');
+        if (dashboardMoonIcon) dashboardMoonIcon.style.display = 'none';
+        if (dashboardSunIcon) dashboardSunIcon.style.display = 'inline';
+    }
+}
+
+// Load user data
+function loadUserData() {
+    // Get user data from localStorage or session
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    currentUser = userData;
+    
+    // Update user display elements
+    updateUserDisplay(userData);
+}
+
+// Update user display elements
+function updateUserDisplay(userData) {
+    const userName = userData.name || 'User';
+    const userRole = userData.role || 'Member';
     
     // Update all user name elements
     const userNameElements = [
@@ -48,234 +126,330 @@ function updateUserInfo(user) {
         'userNameWelcome'
     ];
     
-    userNameElements.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) element.textContent = userName;
+    userNameElements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = userName;
+        }
     });
     
-    // Update role elements
+    // Update user role elements
     const userRoleElements = [
         'userRoleSidebar',
         'userRoleMobile'
     ];
     
-    userRoleElements.forEach(id => {
-        const element = document.getElementById(id);
-        if (element) element.textContent = userRole;
+    userRoleElements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent = userRole;
+        }
     });
     
-    // Update profile images
-    const profileImageElements = [
+    // Update profile images if user has avatar
+    if (userData.avatar) {
+        updateProfileImages(userData.avatar);
+    }
+}
+
+// Update profile images
+function updateProfileImages(avatarUrl) {
+    const profileElements = [
         'sidebarProfileImage',
         'mobileProfileImage'
     ];
     
-    profileImageElements.forEach(id => {
-        const element = document.getElementById(id);
-        if (element && avatarUrl) {
-            // Use the proxy service for avatar images
-            const proxyAvatarUrl = `https://test.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(avatarUrl)}`;
-            element.innerHTML = `<img src="${proxyAvatarUrl}" alt="Profile" class="w-full h-full rounded-full object-cover" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-user text-white text-sm\\"></i>';">`;
-        } else if (element) {
-            // Keep default icon if no avatar URL
-            element.innerHTML = '<i class="fas fa-user text-white text-sm"></i>';
+    profileElements.forEach(elementId => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-full h-full object-cover rounded-full">`;
         }
     });
 }
 
-function initializeSidebarComponents() {
-    // Sidebar elements
+// Initialize sidebar
+function initializeSidebar() {
+    const savedState = localStorage.getItem('sidebarCollapsed');
+    if (savedState === 'true') {
+        collapseSidebar();
+    }
+}
+
+// Toggle sidebar
+function toggleSidebar() {
+    if (sidebarCollapsed) {
+        expandSidebar();
+    } else {
+        collapseSidebar();
+    }
+}
+
+// Collapse sidebar
+function collapseSidebar() {
     const sidebar = document.getElementById('sidebar');
-    const header = document.getElementById('header');
-    const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
-    const sidebarToggleMobile = document.getElementById('sidebarToggleMobile');
-    const mobileOverlay = document.getElementById('mobileOverlay');
-    const closeMobileMenuBtn = document.getElementById('closeMobileMenu');
     const logoText = document.getElementById('logoText');
     const sidebarTexts = document.querySelectorAll('.sidebar-text');
+    const toggleIcon = document.querySelector('#sidebarToggleDesktop i');
     
-    // Get header toggle button reference
-    const sidebarToggleHeader = document.getElementById('sidebarToggleHeader');
+    if (sidebar) {
+        sidebar.classList.remove('w-64');
+        sidebar.classList.add('w-16');
+    }
     
-    // Set initial state - hide header toggle when sidebar is expanded
-    if (sidebarToggleHeader) {
-        sidebarToggleHeader.style.display = 'none';
+    if (logoText) {
+        logoText.style.opacity = '0';
+        setTimeout(() => {
+            logoText.style.display = 'none';
+        }, 150);
     }
-
-    // Sidebar toggle function
-    function toggleSidebar() {
-        isCollapsed = !isCollapsed;
-        
-        if (isCollapsed) {
-            sidebar.classList.remove('w-64');
-            sidebar.classList.add('w-16');
-            logoText.classList.add('opacity-0', 'hidden');
-            sidebarTexts.forEach(text => text.classList.add('hidden'));
-            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right text-sm"></i>';
-            if (sidebarToggleHeader) {
-                sidebarToggleHeader.style.display = 'block';
-            }
-            header.style.marginLeft = '-4rem';
-            header.style.zIndex = '30';
-            closeAllSubmenus();
-            
-            // Hide dropdown arrows when collapsed
-            const dropdownArrows = document.querySelectorAll('#dtks-arrow, #usulan-arrow, #unduh-arrow, #dusun-arrow');
-            dropdownArrows.forEach(arrow => {
-                if (arrow) arrow.style.display = 'none';
-            });
-        } else {
-            sidebar.classList.remove('w-16');
-            sidebar.classList.add('w-64');
-            setTimeout(() => {
-                logoText.classList.remove('opacity-0', 'hidden');
-                sidebarTexts.forEach(text => text.classList.remove('hidden'));
-                
-                // Show dropdown arrows when expanded
-                const dropdownArrows = document.querySelectorAll('#dtks-arrow, #usulan-arrow, #unduh-arrow, #dusun-arrow');
-                dropdownArrows.forEach(arrow => {
-                    if (arrow) arrow.style.display = 'block';
-                });
-            }, 150);
-            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left text-sm"></i>';
-            if (sidebarToggleHeader) {
-                sidebarToggleHeader.style.display = 'none';
-            }
-            header.style.marginLeft = '0';
-            header.style.zIndex = '20';
-        }
-    }
-
-    // Desktop sidebar toggle (from sidebar)
-    if (sidebarToggleDesktop) {
-        sidebarToggleDesktop.addEventListener('click', toggleSidebar);
-    }
-
-    // Header sidebar toggle (from header)
-    if (sidebarToggleHeader) {
-        sidebarToggleHeader.addEventListener('click', toggleSidebar);
-    }
-
-    // Mobile menu toggle
-    if (sidebarToggleMobile) {
-        sidebarToggleMobile.addEventListener('click', function() {
-            mobileOverlay.classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        });
-    }
-
-    // Close mobile menu
-    if (closeMobileMenuBtn) {
-        closeMobileMenuBtn.addEventListener('click', function() {
-            mobileOverlay.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        });
-    }
-
-    // Close mobile menu when clicking overlay
-    if (mobileOverlay) {
-        mobileOverlay.addEventListener('click', function(e) {
-            if (e.target === mobileOverlay) {
-                mobileOverlay.classList.add('hidden');
-                document.body.style.overflow = 'auto';
-            }
-        });
-    }
-
-    // Handle responsive behavior
-    function handleResize() {
-        const isMobile = window.innerWidth < 768;
-        
-        if (!isMobile && mobileOverlay) {
-            mobileOverlay.classList.add('hidden');
-            document.body.style.overflow = 'auto';
-        }
-    }
-
-    window.addEventListener('resize', handleResize);
-}
-
-function toggleSubmenu(menuId) {
-    const submenu = document.getElementById(menuId + '-submenu');
-    const arrow = document.getElementById(menuId + '-arrow');
     
-    if (submenu && arrow) {
-        if (submenu.classList.contains('hidden')) {
-            submenu.classList.remove('hidden');
-            arrow.classList.add('rotate-180');
-        } else {
-            submenu.classList.add('hidden');
-            arrow.classList.remove('rotate-180');
-        }
-    }
-}
-
-function closeAllSubmenus() {
-    const allSubmenus = ['dtks', 'usulan', 'unduh', 'dusun'];
-    allSubmenus.forEach(menuId => {
-        const submenu = document.getElementById(menuId + '-submenu');
-        const arrow = document.getElementById(menuId + '-arrow');
-        if (submenu && arrow) {
-            submenu.classList.add('hidden');
-            arrow.classList.remove('rotate-180');
-        }
+    sidebarTexts.forEach(text => {
+        text.style.opacity = '0';
+        setTimeout(() => {
+            text.style.display = 'none';
+        }, 150);
     });
+    
+    if (toggleIcon) {
+        toggleIcon.classList.remove('fa-chevron-left');
+        toggleIcon.classList.add('fa-chevron-right');
+    }
+    
+    sidebarCollapsed = true;
+    localStorage.setItem('sidebarCollapsed', 'true');
 }
 
-function handleMenuClick(menuId) {
-    if (isCollapsed) {
-        // Expand sidebar first, then open submenu
-        const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
-        if (sidebarToggleDesktop) {
-            sidebarToggleDesktop.click();
+// Expand sidebar
+function expandSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const logoText = document.getElementById('logoText');
+    const sidebarTexts = document.querySelectorAll('.sidebar-text');
+    const toggleIcon = document.querySelector('#sidebarToggleDesktop i');
+    
+    if (sidebar) {
+        sidebar.classList.remove('w-16');
+        sidebar.classList.add('w-64');
+    }
+    
+    setTimeout(() => {
+        if (logoText) {
+            logoText.style.display = 'block';
             setTimeout(() => {
-                closeAllSubmenus();
-                toggleSubmenu(menuId);
-            }, 300);
+                logoText.style.opacity = '1';
+            }, 50);
         }
-    } else {
-        const currentSubmenu = document.getElementById(menuId + '-submenu');
-        const isCurrentOpen = currentSubmenu && !currentSubmenu.classList.contains('hidden');
         
-        closeAllSubmenus();
+        sidebarTexts.forEach(text => {
+            text.style.display = 'block';
+            setTimeout(() => {
+                text.style.opacity = '1';
+            }, 50);
+        });
+    }, 150);
+    
+    if (toggleIcon) {
+        toggleIcon.classList.remove('fa-chevron-right');
+        toggleIcon.classList.add('fa-chevron-left');
+    }
+    
+    sidebarCollapsed = false;
+    localStorage.setItem('sidebarCollapsed', 'false');
+}
+
+// Toggle mobile menu
+function toggleMobileMenu() {
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    if (mobileOverlay) {
+        mobileOverlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// Close mobile menu
+function closeMobileMenuHandler() {
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    if (mobileOverlay) {
+        mobileOverlay.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Handle window resize
+function handleWindowResize() {
+    const mobileOverlay = document.getElementById('mobileOverlay');
+    
+    // Close mobile menu on desktop
+    if (window.innerWidth >= 768 && mobileOverlay && !mobileOverlay.classList.contains('hidden')) {
+        closeMobileMenuHandler();
+    }
+}
+
+// Handle menu clicks
+function handleMenuClick(menuType) {
+    const arrow = document.getElementById(`${menuType}-arrow`);
+    const submenu = document.getElementById(`${menuType}-submenu`);
+    const mobileArrow = document.getElementById(`mobile-${menuType}-arrow`);
+    const mobileSubmenu = document.getElementById(`mobile-${menuType}-submenu`);
+    
+    // Handle desktop menu
+    if (arrow && submenu) {
+        const isHidden = submenu.classList.contains('hidden');
         
-        if (!isCurrentOpen) {
-            toggleSubmenu(menuId);
+        if (isHidden) {
+            submenu.classList.remove('hidden');
+            arrow.style.transform = 'rotate(180deg)';
+        } else {
+            submenu.classList.add('hidden');
+            arrow.style.transform = 'rotate(0deg)';
+        }
+    }
+    
+    // Handle mobile menu
+    if (mobileArrow && mobileSubmenu) {
+        const isHidden = mobileSubmenu.classList.contains('hidden');
+        
+        if (isHidden) {
+            mobileSubmenu.classList.remove('hidden');
+            mobileArrow.style.transform = 'rotate(180deg)';
+        } else {
+            mobileSubmenu.classList.add('hidden');
+            mobileArrow.style.transform = 'rotate(0deg)';
         }
     }
 }
 
-function initializeDashboardDarkMode() {
-    const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
-    
-    // Check saved theme preference
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    
-    if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-        updateDashboardDarkModeIcons(true);
-    }
-
-    function toggleDarkMode() {
-        const isDark = document.documentElement.classList.toggle('dark');
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        updateDashboardDarkModeIcons(isDark);
-    }
-
-    if (dashboardDarkModeToggle) {
-        dashboardDarkModeToggle.addEventListener('click', toggleDarkMode);
+// Logout function
+function logout() {
+    // Show confirmation dialog
+    if (confirm('Apakah Anda yakin ingin keluar?')) {
+        // Clear user data
+        localStorage.removeItem('userData');
+        localStorage.removeItem('authToken');
+        sessionStorage.clear();
+        
+        // Hide dashboard and show login
+        const dashboardContainer = document.getElementById('dashboardContainer');
+        const loginContainer = document.getElementById('loginContainer');
+        
+        if (dashboardContainer) {
+            dashboardContainer.classList.add('hidden');
+        }
+        
+        if (loginContainer) {
+            loginContainer.classList.remove('hidden');
+        }
+        
+        // Reset forms
+        const loginForm = document.querySelector('#loginForm form');
+        const otpForm = document.querySelector('#otpForm form');
+        
+        if (loginForm) {
+            loginForm.reset();
+        }
+        
+        if (otpForm) {
+            otpForm.reset();
+        }
+        
+        // Hide OTP form and show login form
+        const loginFormContainer = document.getElementById('loginForm');
+        const otpFormContainer = document.getElementById('otpForm');
+        
+        if (loginFormContainer) {
+            loginFormContainer.classList.remove('hidden');
+        }
+        
+        if (otpFormContainer) {
+            otpFormContainer.classList.add('hidden');
+        }
+        
+        // Reset sidebar state
+        sidebarCollapsed = false;
+        expandSidebar();
+        
+        console.log('User logged out successfully');
     }
 }
 
-function updateDashboardDarkModeIcons(isDark) {
-    // Dashboard icons
-    const dashboardMoonIcon = document.getElementById('dashboardMoonIcon');
-    const dashboardSunIcon = document.getElementById('dashboardSunIcon');
+// Show dashboard (called from login script)
+function showDashboard(userData) {
+    const loginContainer = document.getElementById('loginContainer');
+    const dashboardContainer = document.getElementById('dashboardContainer');
     
-    if (dashboardMoonIcon && dashboardSunIcon) {
-        dashboardMoonIcon.style.display = isDark ? 'none' : 'block';
-        dashboardSunIcon.style.display = isDark ? 'block' : 'none';
+    if (loginContainer) {
+        loginContainer.classList.add('hidden');
     }
+    
+    if (dashboardContainer) {
+        dashboardContainer.classList.remove('hidden');
+    }
+    
+    // Update user data
+    currentUser = userData;
+    updateUserDisplay(userData);
+    
+    // Save user data
+    localStorage.setItem('userData', JSON.stringify(userData));
+    
+    console.log('Dashboard shown for user:', userData.name);
 }
 
-console.log('Dashboard System Initialized');
+// Utility functions
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full`;
+    
+    // Set notification style based on type
+    switch (type) {
+        case 'success':
+            notification.classList.add('bg-green-500', 'text-white');
+            break;
+        case 'error':
+            notification.classList.add('bg-red-500', 'text-white');
+            break;
+        case 'warning':
+            notification.classList.add('bg-yellow-500', 'text-white');
+            break;
+        default:
+            notification.classList.add('bg-blue-500', 'text-white');
+    }
+    
+    notification.innerHTML = `
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : type === 'warning' ? 'exclamation' : 'info'}-circle"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+        notification.classList.add('translate-x-full');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+// Export functions for external use
+window.dashboardFunctions = {
+    showDashboard,
+    logout,
+    handleMenuClick,
+    toggleDarkMode,
+    showNotification
+};
+
+// Make functions globally available
+window.showDashboard = showDashboard;
+window.logout = logout;
+window.handleMenuClick = handleMenuClick;
+window.toggleDarkMode = toggleDarkMode;
+window.showNotification = showNotification;
