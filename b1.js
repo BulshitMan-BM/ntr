@@ -1049,14 +1049,31 @@ function initializeSidebarComponents() {
 function toggleSubmenu(menuId) {
     const submenu = document.getElementById(menuId + '-submenu');
     const arrow = document.getElementById(menuId + '-arrow');
-    if (submenu && arrow) {
-        if (submenu.classList.contains('hidden')) {
-            submenu.classList.remove('hidden');
-            arrow.classList.add('rotate-180');
-        } else {
-            submenu.classList.add('hidden');
-            arrow.classList.remove('rotate-180');
+
+    if (!submenu || !arrow) return;
+
+    // Kalau sidebar collapsed → otomatis expand dulu
+    if (isCollapsed) {
+        const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
+        if (sidebarToggleDesktop) {
+            sidebarToggleDesktop.click(); // expand sidebar
+            setTimeout(() => {
+                closeAllSubmenus(); // tutup semua submenu lain
+                submenu.classList.remove('hidden'); // buka submenu yg dipilih
+                arrow.classList.add('rotate-180');
+            }, 300);
         }
+        return; // stop biar expand dulu selesai
+    }
+
+    // Kalau sidebar sudah expanded → close semua submenu lain dulu
+    const isCurrentOpen = !submenu.classList.contains('hidden');
+    closeAllSubmenus();
+
+    // Toggle submenu yg diklik
+    if (!isCurrentOpen) {
+        submenu.classList.remove('hidden');
+        arrow.classList.add('rotate-180');
     }
 }
 
@@ -1069,31 +1086,6 @@ function closeAllSubmenus() {
             arrow.classList.remove('rotate-180');
         }
     });
-}
-
-function handleMenuClick(menuId) {
-    const submenu = document.getElementById(menuId + '-submenu');
-
-    if (submenu) {
-        // kalau ada submenu → baru auto expand
-        if (isCollapsed) {
-            const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
-            if (sidebarToggleDesktop) {
-                sidebarToggleDesktop.click();
-                setTimeout(() => {
-                    closeAllSubmenus();
-                    toggleSubmenu(menuId);
-                }, 300);
-            }
-        } else {
-            const isCurrentOpen = !submenu.classList.contains('hidden');
-            closeAllSubmenus();
-            if (!isCurrentOpen) toggleSubmenu(menuId);
-        }
-    } else {
-        // kalau menu tidak punya submenu → tidak auto expand
-        console.log(`Menu "${menuId}" tidak punya submenu, skip auto expand.`);
-    }
 }
 
 // ===== DARK MODE =====
@@ -1124,5 +1116,6 @@ function updateDashboardDarkModeIcons(isDark) {
 }
 
 console.log('Dashboard System Initialized');
+
 
 
