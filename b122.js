@@ -949,7 +949,7 @@ function updateUserInfo(user) {
         if (element && avatarUrl) {
             const proxyAvatarUrl = `https://test.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(avatarUrl)}`;
             element.innerHTML = `<img src="${proxyAvatarUrl}" alt="Profile" class="w-full h-full rounded-full object-cover" 
-              onerror="this.style.display='none'; this.parentElement.innerHTML='<i class="fas fa-user text-white text-sm"></i>'`;
+              onerror="this.style.display='none'; this.parentElement.innerHTML='<i class="fas fa-user text-white text-sm"></i>`;
         } else if (element) {
             element.innerHTML = '<i class="fas fa-user text-white text-sm"></i>';
         }
