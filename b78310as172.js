@@ -578,31 +578,28 @@ async function handleLogin(event) {
 
 async function handleOTPVerification(event) {
     event.preventDefault();
-    
+
+    if (isSubmittingOTP) return; // cegah submit ganda
+    isSubmittingOTP = true;
+
     const nik = localStorage.getItem("nik");
     const otp = getOTPValue();
-    
-if (!nik) {
-    showInlineMessage('otpForm', 'Session expired. Silakan login ulang.', 'error');
-    setTimeout(() => backToLogin(), 2000);
-    return false;
-}
-    
-    if (!otp) {
-        showInlineMessage('otpForm', 'Harap masukkan kode OTP', 'error');
-        highlightOTPError();
-        document.getElementById('otp1')?.focus();
-        return false;
-    }
-    
-    if (otp.length !== 6 || !/^\d+$/.test(otp)) {
-        showInlineMessage('otpForm', 'Kode OTP harus 6 digit angka', 'error');
-        highlightOTPError();
-        document.getElementById('otp1')?.focus();
+
+    if (!nik) {
+        showInlineMessage('otpForm', 'Session expired. Silakan login ulang.', 'error');
+        setTimeout(() => backToLogin(), 2000);
+        isSubmittingOTP = false;
         return false;
     }
 
-    // Start loading state
+    if (!otp || otp.length !== 6 || !/^\d+$/.test(otp)) {
+        showInlineMessage('otpForm', 'Kode OTP harus 6 digit angka', 'error');
+        highlightOTPError();
+        document.getElementById('otp1')?.focus();
+        isSubmittingOTP = false;
+        return false;
+    }
+
     setButtonLoading('otpButton', 'otpIcon', 'otpText', true, 'Memverifikasi...');
     disableOTPInputs(true);
 
@@ -613,76 +610,69 @@ if (!nik) {
             body: JSON.stringify({ action: "verify-otp", nik, otp })
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
         const data = await response.json();
-        
-      if (data.success) {
-    clearInterval(otpExpiryTimer);
-    
-    localStorage.setItem("user", JSON.stringify(data.user));
-    localStorage.setItem('isLoggedIn', 'true'); // hanya setelah OTP
-    
-    showInlineMessage('otpForm', data.message || 'Verifikasi berhasil! Mengarahkan ke dashboard...', 'success');
-    
-    setTimeout(() => {
-        loadDashboard(data.user);
-    }, 1500);
-}
-else {
+
+        if (data.success) {
+            clearInterval(otpExpiryTimer);
+            localStorage.setItem("user", JSON.stringify(data.user));
+            localStorage.setItem('isLoggedIn', 'true');
+
+            showInlineMessage('otpForm', data.message || 'Verifikasi berhasil! Mengarahkan ke dashboard...', 'success');
+
+            setTimeout(() => {
+                loadDashboard(data.user);
+                isSubmittingOTP = false;
+            }, 1500);
+        } else {
             showInlineMessage('otpForm', data.message || 'Kode OTP salah. Silakan coba lagi.', 'error');
-            
-            // Clear OTP inputs and highlight error
             clearOTPInputs();
             highlightOTPError();
             document.getElementById('otp1')?.focus();
-            
-            // Shake animation for error
+
             const otpForm = document.getElementById('otpForm');
             if (otpForm) {
                 otpForm.style.animation = 'shake 0.5s ease-in-out';
-                setTimeout(() => {
-                    otpForm.style.animation = '';
-                }, 500);
+                setTimeout(() => { otpForm.style.animation = ''; }, 500);
             }
-            
-            // Re-enable inputs after error
+
             setTimeout(() => {
                 setButtonLoading('otpButton', 'otpIcon', 'otpText', false);
                 disableOTPInputs(false);
+                isSubmittingOTP = false;
             }, 1000);
         }
     } catch (error) {
         console.error('OTP verification error:', error);
         showInlineMessage('otpForm', 'Terjadi kesalahan koneksi. Silakan coba lagi.', 'error');
-        
-        // Re-enable inputs after error
+
         setTimeout(() => {
             setButtonLoading('otpButton', 'otpIcon', 'otpText', false);
             disableOTPInputs(false);
+            isSubmittingOTP = false;
         }, 1000);
     }
-    
+
     return false;
 }
+
 
 async function resendOtp() {
     const nik = localStorage.getItem("nik");
     const resendBtn = document.getElementById("resendBtn");
-    
+
     if (!nik) {
         showInlineMessage('otpForm', 'Session expired. Silakan login ulang.', 'error');
         setTimeout(() => backToLogin(), 2000);
         return;
     }
 
-    if (!resendBtn || resendBtn.disabled) {
-        return; // Prevent multiple clicks
-    }
+    if (!resendBtn || resendBtn.disabled) return;
 
-    // Show loading state for resend button
+    clearOTPInputs();        // reset input lama
+    resetOtpExpiry();        // reset timer
+    disableOTPInputs(true);  // disable sementara
+    isSubmittingOTP = false; // pastikan flag reset
+
     const originalText = resendBtn.textContent;
     resendBtn.disabled = true;
     resendBtn.innerHTML = '<i class="fas fa-spinner loading-spinner mr-2"></i>Mengirim...';
@@ -694,39 +684,26 @@ async function resendOtp() {
             body: JSON.stringify({ action: "resend-otp", nik })
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
         const data = await response.json();
-        
+
         if (data.success !== false) {
-            // Increment resend attempts
             resendAttempts++;
-            
-            // Update email if provided in resend response
+
             if (data.email) {
                 localStorage.setItem("userEmail", data.email);
-                // Update displayed email
                 const maskedEmailElement = document.getElementById('maskedEmail');
                 if (maskedEmailElement) {
-                    const maskedEmail = maskEmail(data.email);
-                    maskedEmailElement.textContent = maskedEmail;
+                    maskedEmailElement.textContent = maskEmail(data.email);
                 }
             }
-            
-            // Reset OTP expiry and start new countdown
+
             resetOtpExpiry();
-            
             showInlineMessage('otpForm', data.message || 'OTP baru telah dikirim ke email terdaftar', 'success');
-            
-            // Get progressive cooldown time
+
             const cooldownTime = getNextResendCooldown();
             startResendCooldown(cooldownTime);
         } else {
             showInlineMessage('otpForm', data.message || 'Gagal mengirim ulang OTP', 'error');
-            
-            // Reset button on API error
             setTimeout(() => {
                 resendBtn.disabled = false;
                 resendBtn.textContent = originalText;
@@ -735,14 +712,15 @@ async function resendOtp() {
     } catch (error) {
         console.error('Resend OTP error:', error);
         showInlineMessage('otpForm', 'Terjadi kesalahan saat mengirim ulang OTP', 'error');
-        
-        // Reset button on network error
         setTimeout(() => {
             resendBtn.disabled = false;
             resendBtn.textContent = originalText;
         }, 2000);
+    } finally {
+        disableOTPInputs(false);
     }
 }
+
 
 // ===== UI FUNCTIONS =====
 function showOTPForm(email = null) {
@@ -789,46 +767,18 @@ function backToLogin() {
     otpForm.classList.add('hidden');
     loginForm.classList.remove('hidden');
 
-    // Clear timers
     clearInterval(resendTimer);
     clearInterval(otpExpiryTimer);
     resendTimer = otpExpiryTimer = null;
 
-    // Reset counters
     resendAttempts = 0;
     otpExpiryTime = OTP_EXPIRY_TIME;
+    isSubmittingOTP = false;  // reset flag OTP
 
-    // Clear OTP inputs
     clearOTPInputs();
-
-    const otpButton = document.getElementById('otpButton');
-    if (otpButton) {
-        otpButton.disabled = false;
-        otpButton.classList.remove('opacity-50', 'cursor-not-allowed');
-    }
-
-    // Reset resend button
-    const resendBtn = document.getElementById('resendBtn');
-    if (resendBtn) {
-        resendBtn.disabled = false;
-        resendBtn.textContent = 'Kirim Ulang OTP';
-    }
-
-    // Reset expiry display
-    const countdownElement = document.getElementById("otpExpiryCountdown");
-    if (countdownElement) {
-        countdownElement.textContent = "1:00";
-        countdownElement.parentElement.className = "mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium";
-    }
-
-    // Hapus event listener lama sebelum attach listener baru
-    for (let i = 1; i <= 6; i++) {
-        const input = document.getElementById(`otp${i}`);
-        if (input) {
-            input.replaceWith(input.cloneNode(true)); // reset event listener lama
-        }
-    }
+    localStorage.removeItem('otpValue'); // hapus key OTP lama jika ada
 }
+
 
 
 function logout() {
