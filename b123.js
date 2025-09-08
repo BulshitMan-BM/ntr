@@ -758,42 +758,57 @@ function backToLogin() {
 function logout() {
     const loginContainer = document.getElementById('loginContainer');
     const dashboardContainer = document.getElementById('dashboardContainer');
-    
+    const loginForm = document.getElementById('loginForm');
+    const otpForm = document.getElementById('otpForm');
+
     if (loginContainer) loginContainer.classList.remove('hidden');
     if (dashboardContainer) dashboardContainer.classList.add('hidden');
-    
-    // Clear all data
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('user');
-    localStorage.removeItem('nik');
-    localStorage.removeItem('userEmail');
-    
-    // Clear all timers immediately
+    if (loginForm) loginForm.classList.remove('hidden');
+    if (otpForm) otpForm.classList.add('hidden');
+
+    // 🔴 Clear semua data session
+    localStorage.clear(); // langsung clear semua biar aman
+    currentUser = null;
+
+    // 🔴 Clear semua timer
     clearInterval(resendTimer);
     clearInterval(otpExpiryTimer);
     resendTimer = null;
     otpExpiryTimer = null;
-    
-    // Reset counters
+
+    // 🔴 Reset counter dan expiry
     resendAttempts = 0;
     otpExpiryTime = OTP_EXPIRY_TIME;
-    
-    // Reset forms
-    const loginForm = document.getElementById('loginForm');
-    const otpForm = document.getElementById('otpForm');
-    if (loginForm) loginForm.classList.remove('hidden');
-    if (otpForm) otpForm.classList.add('hidden');
-    
-    // Clear form inputs
+
+    // 🔴 Reset input login & OTP
     const nikInput = document.getElementById('nik');
     const passwordInput = document.getElementById('password');
-    
     if (nikInput) nikInput.value = '';
     if (passwordInput) passwordInput.value = '';
     clearOTPInputs();
-    
-    currentUser = null;
+
+    // 🔴 Reset tombol OTP
+    const otpButton = document.getElementById('otpButton');
+    if (otpButton) {
+        otpButton.disabled = false;
+        otpButton.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+
+    // 🔴 Reset tombol Kirim Ulang OTP
+    const resendBtn = document.getElementById('resendBtn');
+    if (resendBtn) {
+        resendBtn.disabled = false;
+        resendBtn.textContent = 'Kirim Ulang OTP';
+    }
+
+    // 🔴 Reset countdown text
+    const countdownElement = document.getElementById("otpExpiryCountdown");
+    if (countdownElement) {
+        countdownElement.textContent = "1:00";
+        countdownElement.parentElement.className = "mt-2 text-xs text-orange-600 dark:text-orange-400 font-medium";
+    }
 }
+
 
 // ===== DARK MODE FUNCTIONS =====
 function initializeDarkMode() {
@@ -892,7 +907,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    console.log('Authentication System Initialized');
 });
 
 // ===== DASHBOARD SYSTEM =====
@@ -1136,7 +1150,6 @@ function updateDashboardDarkModeIcons(isDark) {
     }
 }
 
-console.log('Dashboard System Initialized');
 
 
 
