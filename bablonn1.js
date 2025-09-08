@@ -896,6 +896,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ===== DASHBOARD SYSTEM =====
+// ===== DASHBOARD SYSTEM =====
 let isCollapsed = false;
 
 // ===== DASHBOARD FUNCTIONS =====
@@ -930,31 +931,32 @@ function updateUserInfo(user) {
     const userRole = user?.Role || user?.role || user?.jabatan || 'Member';
     const avatarUrl = user?.ProfilAvatar || null;
 
-    const userNameElements = ['userNameSidebar', 'userNameMobile', 'userNameWelcome'];
+    const userNameElements = ['userNameSidebar','userNameMobile','userNameWelcome'];
     userNameElements.forEach(id => {
         const element = document.getElementById(id);
         if (element) element.textContent = userName;
     });
     
-    const userRoleElements = ['userRoleSidebar', 'userRoleMobile'];
+    const userRoleElements = ['userRoleSidebar','userRoleMobile'];
     userRoleElements.forEach(id => {
         const element = document.getElementById(id);
         if (element) element.textContent = userRole;
     });
-
-    const profileImageElements = ['sidebarProfileImage', 'mobileProfileImage'];
+    
+    const profileImageElements = ['sidebarProfileImage','mobileProfileImage'];
     profileImageElements.forEach(id => {
         const element = document.getElementById(id);
         if (element && avatarUrl) {
             const proxyAvatarUrl = `https://test.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(avatarUrl)}`;
             element.innerHTML = `<img src="${proxyAvatarUrl}" alt="Profile" class="w-full h-full rounded-full object-cover" 
-                onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-user text-white text-sm\\"></i>';">`;
+              onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-user text-white text-sm\\"></i>';">`;
         } else if (element) {
             element.innerHTML = '<i class="fas fa-user text-white text-sm"></i>';
         }
     });
 }
 
+// ===== SIDEBAR SYSTEM =====
 function initializeSidebarComponents() {
     const sidebar = document.getElementById('sidebar');
     const header = document.getElementById('header');
@@ -974,24 +976,23 @@ function initializeSidebarComponents() {
         if (isCollapsed) {
             sidebar.classList.remove('w-64');
             sidebar.classList.add('w-16');
-            logoText.classList.add('opacity-0', 'hidden');
+            logoText.classList.add('opacity-0','hidden');
             sidebarTexts.forEach(text => text.classList.add('hidden'));
             sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right text-sm"></i>';
             if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'block';
             header.style.marginLeft = '-4rem';
             header.style.zIndex = '30';
             closeAllSubmenus();
-
-            const dropdownArrows = document.querySelectorAll('#dtks-arrow, #usulan-arrow, #unduh-arrow, #dusun-arrow');
-            dropdownArrows.forEach(arrow => { if (arrow) arrow.style.display = 'none'; });
+            document.querySelectorAll('#dtks-arrow,#usulan-arrow,#unduh-arrow,#dusun-arrow')
+              .forEach(arrow => arrow.style.display = 'none');
         } else {
             sidebar.classList.remove('w-16');
             sidebar.classList.add('w-64');
             setTimeout(() => {
-                logoText.classList.remove('opacity-0', 'hidden');
+                logoText.classList.remove('opacity-0','hidden');
                 sidebarTexts.forEach(text => text.classList.remove('hidden'));
-                const dropdownArrows = document.querySelectorAll('#dtks-arrow, #usulan-arrow, #unduh-arrow, #dusun-arrow');
-                dropdownArrows.forEach(arrow => { if (arrow) arrow.style.display = 'block'; });
+                document.querySelectorAll('#dtks-arrow,#usulan-arrow,#unduh-arrow,#dusun-arrow')
+                  .forEach(arrow => arrow.style.display = 'block');
             }, 150);
             sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left text-sm"></i>';
             if (sidebarToggleHeader) sidebarToggleHeader.style.display = 'none';
@@ -1005,19 +1006,24 @@ function initializeSidebarComponents() {
 
     if (sidebarToggleMobile) {
         sidebarToggleMobile.addEventListener('click', function() {
+            sidebar.classList.remove('hidden');
             mobileOverlay.classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         });
     }
+
     if (closeMobileMenuBtn) {
         closeMobileMenuBtn.addEventListener('click', function() {
+            sidebar.classList.add('hidden');
             mobileOverlay.classList.add('hidden');
             document.body.style.overflow = 'auto';
         });
     }
+
     if (mobileOverlay) {
         mobileOverlay.addEventListener('click', function(e) {
             if (e.target === mobileOverlay) {
+                sidebar.classList.add('hidden');
                 mobileOverlay.classList.add('hidden');
                 document.body.style.overflow = 'auto';
             }
@@ -1026,6 +1032,11 @@ function initializeSidebarComponents() {
 
     function handleResize() {
         const isMobile = window.innerWidth < 768;
+        if (isMobile) {
+            sidebar.classList.add('hidden');
+        } else {
+            sidebar.classList.remove('hidden');
+        }
         if (!isMobile && mobileOverlay) {
             mobileOverlay.classList.add('hidden');
             document.body.style.overflow = 'auto';
@@ -1034,6 +1045,7 @@ function initializeSidebarComponents() {
     window.addEventListener('resize', handleResize);
 }
 
+// ===== SUBMENU =====
 function toggleSubmenu(menuId) {
     const submenu = document.getElementById(menuId + '-submenu');
     const arrow = document.getElementById(menuId + '-arrow');
@@ -1049,8 +1061,7 @@ function toggleSubmenu(menuId) {
 }
 
 function closeAllSubmenus() {
-    const allSubmenus = ['dtks', 'usulan', 'unduh', 'dusun'];
-    allSubmenus.forEach(menuId => {
+    ['dtks','usulan','unduh','dusun'].forEach(menuId => {
         const submenu = document.getElementById(menuId + '-submenu');
         const arrow = document.getElementById(menuId + '-arrow');
         if (submenu && arrow) {
@@ -1064,6 +1075,7 @@ function handleMenuClick(menuId) {
     const submenu = document.getElementById(menuId + '-submenu');
 
     if (submenu) {
+        // kalau ada submenu → baru auto expand
         if (isCollapsed) {
             const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
             if (sidebarToggleDesktop) {
@@ -1078,10 +1090,13 @@ function handleMenuClick(menuId) {
             closeAllSubmenus();
             if (!isCurrentOpen) toggleSubmenu(menuId);
         }
+    } else {
+        // kalau menu tidak punya submenu → tidak auto expand
+        console.log(`Menu "${menuId}" tidak punya submenu, skip auto expand.`);
     }
-    // 👉 kalau menuId tidak punya submenu → sidebar tidak akan auto expand
 }
 
+// ===== DARK MODE =====
 function initializeDashboardDarkMode() {
     const dashboardDarkModeToggle = document.getElementById('dashboardDarkModeToggle');
     const savedTheme = localStorage.getItem('theme') || 'light';
@@ -1109,4 +1124,5 @@ function updateDashboardDarkModeIcons(isDark) {
 }
 
 console.log('Dashboard System Initialized');
+
 
