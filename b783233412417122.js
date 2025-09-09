@@ -241,6 +241,10 @@ function clearFieldErrors() {
     const fields = ['nik', 'password'];
     fields.forEach(fieldId => {
         highlightField(fieldId, false);
+        const errorElement = document.getElementById(`${fieldId}Error`);
+        if (errorElement) {
+            errorElement.classList.add('hidden');
+        }
     });
 }
 
@@ -454,6 +458,68 @@ function validateNIKOnBlur(input) {
     }
 }
 
+// TAMBAHKAN FUNGSI VALIDASI REAL-TIME DI SINI
+function validateNIKLive(input) {
+    const value = input.value;
+    const errorElement = document.getElementById('nikError');
+    
+    if (!errorElement) return;
+    
+    if (value.length > 0 && value.length !== 16) {
+        errorElement.textContent = 'NIK harus 16 digit';
+        errorElement.classList.remove('hidden');
+        input.classList.add('border-red-500');
+        input.classList.remove('border-green-500');
+    } else if (value.length === 16) {
+        errorElement.classList.add('hidden');
+        input.classList.remove('border-red-500');
+        input.classList.add('border-green-500');
+    } else {
+        errorElement.classList.add('hidden');
+        input.classList.remove('border-red-500', 'border-green-500');
+    }
+}
+
+function validatePasswordLive(input) {
+    const value = input.value;
+    const errorElement = document.getElementById('passwordError');
+    
+    if (!errorElement) return;
+    
+    if (value.length > 0 && value.length < 6) {
+        errorElement.textContent = 'Password minimal 6 karakter';
+        errorElement.classList.remove('hidden');
+        input.classList.add('border-red-500');
+        input.classList.remove('border-green-500');
+    } else if (value.length >= 6) {
+        errorElement.classList.add('hidden');
+        input.classList.remove('border-red-500');
+        input.classList.add('border-green-500');
+    } else {
+        errorElement.classList.add('hidden');
+        input.classList.remove('border-red-500', 'border-green-500');
+    }
+}
+
+function validatePasswordOnBlur(input) {
+    const value = input.value;
+    const errorElement = document.getElementById('passwordError');
+    
+    if (!errorElement) return;
+    
+    if (value && value.length < 6) {
+        errorElement.textContent = 'Password minimal 6 karakter';
+        errorElement.classList.remove('hidden');
+        input.classList.add('border-red-500');
+        input.classList.remove('border-green-500');
+    } else if (value.length >= 6) {
+        errorElement.classList.add('hidden');
+        input.classList.remove('border-red-500');
+        input.classList.add('border-green-500');
+    }
+}
+
+
 function togglePassword() {
     const passwordInput = document.getElementById('password');
     const toggleIcon = document.getElementById('passwordToggleIcon');
@@ -536,10 +602,11 @@ function handleOTPPaste(event) {
 async function handleLogin(event) {
     event.preventDefault();
 
-    // PERBAIKAN: Cegah multiple submission
+    // Cegah multiple submission
     if (isSubmittingLogin) return false;
     isSubmittingLogin = true;
 
+    // Validasi captcha
     if (!captchaVerified) {
         showInlineMessage('loginForm', 'Harap verifikasi captcha terlebih dahulu', 'error');
         isSubmittingLogin = false;
@@ -551,25 +618,30 @@ async function handleLogin(event) {
 
     clearFieldErrors();
 
-    // PERBAIKAN: Validasi yang lebih spesifik
-    if (!nik || !password) {
-        showInlineMessage('loginForm', 'Harap isi semua field', 'error');
-        if (!nik) highlightField('nik', true);
-        if (!password) highlightField('password', true);
-        isSubmittingLogin = false;
-        return false;
-    }
-
-    if (nik.length !== 16 || !/^\d+$/.test(nik)) {
+    // Validasi field tidak boleh kosong
+    let hasError = false;
+    
+    if (!nik) {
+        showInlineMessage('loginForm', 'NIK harus diisi', 'error');
+        highlightField('nik', true);
+        hasError = true;
+    } else if (nik.length !== 16 || !/^\d+$/.test(nik)) {
         showInlineMessage('loginForm', 'NIK harus 16 digit angka', 'error');
         highlightField('nik', true);
-        isSubmittingLogin = false;
-        return false;
+        hasError = true;
     }
-
-    if (password.length < 6) {
+    
+    if (!password) {
+        showInlineMessage('loginForm', 'Password harus diisi', 'error');
+        highlightField('password', true);
+        hasError = true;
+    } else if (password.length < 6) {
         showInlineMessage('loginForm', 'Password minimal 6 karakter', 'error');
         highlightField('password', true);
+        hasError = true;
+    }
+
+    if (hasError) {
         isSubmittingLogin = false;
         return false;
     }
@@ -942,16 +1014,23 @@ function updateDarkModeIcons(isDark) {
 }
 // ===== INPUT ENHANCEMENTS =====
 function initializeInputEnhancements() {
-    // Clear error states when user starts typing
     const nikInput = document.getElementById('nik');
     const passwordInput = document.getElementById('password');
 
     if (nikInput) {
+        // Validasi real-time untuk NIK
         nikInput.addEventListener('input', function() {
-            clearFieldErrors();
+            validateNIK(this);
+            validateNIKLive(this);
             clearInlineMessages('loginForm');
         });
         
+        // Validasi saat kehilangan fokus
+        nikInput.addEventListener('blur', function() {
+            validateNIKOnBlur(this);
+        });
+        
+        // Navigasi dengan Enter
         nikInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -962,11 +1041,18 @@ function initializeInputEnhancements() {
     }
 
     if (passwordInput) {
+        // Validasi real-time untuk password
         passwordInput.addEventListener('input', function() {
-            clearFieldErrors();
+            validatePasswordLive(this);
             clearInlineMessages('loginForm');
         });
         
+        // Validasi saat kehilangan fokus
+        passwordInput.addEventListener('blur', function() {
+            validatePasswordOnBlur(this);
+        });
+        
+        // Submit dengan Enter
         passwordInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -979,7 +1065,6 @@ function initializeInputEnhancements() {
         });
     }
 }
-
 // ================== INITIALIZATION ==================
 document.addEventListener('DOMContentLoaded', function() {
     initializeDarkMode();
