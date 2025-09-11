@@ -134,57 +134,51 @@ function checkExistingSession() {
 }
 
 function autoLogout(reason) {
-    // Clear all timers
     if (sessionTimer) clearInterval(sessionTimer);
     if (otpTimer) clearInterval(otpTimer);
     if (resendTimer) clearInterval(resendTimer);
     if (visibilityChangeTimer) clearInterval(visibilityChangeTimer);
-    
-    // Clear session data
+
+    // Hapus hanya data session (JANGAN theme)
     localStorage.removeItem('loginTime');
     localStorage.removeItem('lastActivity');
     localStorage.removeItem('pageHiddenTime');
     localStorage.removeItem('userData');
     localStorage.removeItem('nik');
-    localStorage.removeItem('userData');
-    
-    // Reset user state
+
     currentUser = null;
-    resendAttempts = 0; // Reset resend attempts
-    
-    // Redirect to login silently (no message)
+    resendAttempts = 0;
+
     showScreen('login-screen');
     document.getElementById('login-form').reset();
     document.getElementById('login-error').classList.add('hidden');
-    
-    // Reset sidebar state
+
     sidebarExpanded = true;
     if (sidebar) {
         sidebar.style.width = '256px';
         header.style.left = '256px';
         mainContent.style.marginLeft = '256px';
     }
-    
-    // Hide any open modals
+
     hideOtpOverlay();
     hideLogoutModal();
 }
 
 function stopSessionManagement() {
     if (sessionTimer) clearInterval(sessionTimer);
-    
-    // Remove activity listeners
+
     const activities = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
     activities.forEach(activity => {
         document.removeEventListener(activity, updateLastActivity, true);
     });
-    
-    // Clear session data
+
+    // Hapus hanya session, JANGAN theme
     localStorage.removeItem('loginTime');
     localStorage.removeItem('lastActivity');
     localStorage.removeItem('pageHiddenTime');
     localStorage.removeItem('userData');
 }
+
 
 // === API LOGIN FUNCTION ===
 async function login() {
@@ -270,14 +264,6 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.remove('hidden');
 }
 
-// Screen management
-function showScreen(screenId) {
-    const screens = ['login-screen', 'dashboard-screen'];
-    screens.forEach(id => {
-        document.getElementById(id).classList.add('hidden');
-    });
-    document.getElementById(screenId).classList.remove('hidden');
-}
 
 // OTP Overlay management
 function showOtpOverlay() {
@@ -342,18 +328,18 @@ function confirmLogout() {
 
 // Dashboard initialization
 function initializeDashboard() {
-    // Update user info
     if (currentUser) {
-        document.getElementById('userNameSidebar').textContent = currentUser.name;
-        document.getElementById('userRoleSidebar').textContent = currentUser.role;
-        document.getElementById('mobile-user-name').textContent = currentUser.name;
-        document.getElementById('dashboard-title').textContent = `Dashboard - ${currentUser.name}`;
-        
-        // Update profile images
+        const displayName = currentUser.name || "User";
+        const displayRole = currentUser.role || "Member";
+
+        document.getElementById('userNameSidebar').textContent = displayName;
+        document.getElementById('userRoleSidebar').textContent = displayRole;
+        document.getElementById('mobile-user-name').textContent = displayName;
+        document.getElementById('dashboard-title').textContent = `Dashboard - ${displayName}`;
+
         updateProfileImages();
     }
 
-    // Initialize dashboard functionality
     handleResize();
     updateNavToggleVisibility();
     initializeLogout();
@@ -439,7 +425,6 @@ function startOtpTimer() {
     }, 1000);
 }
 
-// === VERIFY OTP ===
 async function verifyOtp(otp) {
     const nik = localStorage.getItem("nik");
     
@@ -452,18 +437,14 @@ async function verifyOtp(otp) {
 
         const data = await res.json();
         
-        // If OTP verification successful, update user data with any additional info
         if (data.success && data.user) {
-            // Update currentUser with complete data from OTP verification
-currentUser = {
-    ...currentUser,
-    name: data.user?.Username || data.user?.name || data.user?.username || data.user?.Nama || currentUser.name,
-    role: data.user?.Role || data.user?.role || currentUser.role,
-    avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || currentUser.avatar
-};
+            currentUser = {
+                ...currentUser,
+                name: data.user?.Username || data.user?.name || data.user?.username || data.user?.Nama || "User",
+                role: data.user?.Role || data.user?.role || "Member",
+                avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || null
+            };
 
-            
-            // Update localStorage with complete user data
             localStorage.setItem("userData", JSON.stringify(currentUser));
         }
         
