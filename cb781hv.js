@@ -211,8 +211,6 @@ async function login() {
         };
         
         // Debug log to verify avatar URL is captured
-        console.log('User data captured:', currentUser);
-        console.log('Avatar URL:', currentUser.avatar);
         
         localStorage.setItem("userData", JSON.stringify(currentUser));
         
@@ -455,16 +453,15 @@ async function verifyOtp(otp) {
             };
             
             // Debug log to verify final avatar URL
-            console.log('Final user data after OTP:', currentUser);
-            console.log('Final avatar URL:', currentUser.avatar);
             
             // Update localStorage with complete user data
             localStorage.setItem("userData", JSON.stringify(currentUser));
+            localStorage.setItem("isOtpVerified", "true");
         }
         
         return data.success;
     } catch (error) {
-        console.error('OTP Verification Error:', error);
+// console.error('OTP Verification Error:', error);
         return false;
     }
 }
@@ -492,20 +489,19 @@ async function resendOtp() {
         // 3rd resend: 15 minutes (900s)
         // And so on...
         const cooldownSeconds = resendAttempts * 5 * 60; // 5 minutes * attempt number
-        
-        console.log(`Resend attempt #${resendAttempts}, cooldown: ${cooldownSeconds / 60} minutes`);
-        
+ 
         // Start progressive cooldown
         startResendCooldown(cooldownSeconds);
         
     } catch (error) {
-        console.error('Resend OTP Error:', error);
+  // console.error('Resend OTP Error:', error);
         alert('Gagal mengirim ulang OTP. Silakan coba lagi.');
     }
 }
 
 // Initialize login functionality when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    // === Login form handler ===
     document.getElementById('login-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -532,7 +528,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Call API login
             await login();
         } catch (error) {
-            console.error('API Error:', error);
             showLoginError('Koneksi bermasalah. Silakan coba lagi.');
         }
 
@@ -542,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loginSpinner.style.display = 'none';
     });
 
-    // Password toggle
+    // === Password toggle ===
     document.getElementById('toggle-password').addEventListener('click', function() {
         const passwordInput = document.getElementById('password');
         const icon = this.querySelector('i');
@@ -555,6 +550,42 @@ document.addEventListener('DOMContentLoaded', function() {
             icon.className = 'fas fa-eye';
         }
     });
+
+    // === Session & OTP check ===
+    const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
+    const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
+    const pageHiddenTime = parseInt(localStorage.getItem('pageHiddenTime') || '0');
+    const storedNik = localStorage.getItem('nik');
+    const storedUserData = localStorage.getItem('userData');
+    const isOtpVerified = localStorage.getItem('isOtpVerified') === 'true'; // ✅ cek OTP
+    const now = Date.now();
+    
+    if (loginTime && lastActivity && storedNik && storedUserData && isOtpVerified) {
+        // Restore user data
+        try {
+            currentUser = JSON.parse(storedUserData);
+        } catch (e) {
+            currentUser = { nik: storedNik, name: 'User', role: 'Member', avatar: null };
+        }
+
+        // Check validitas session
+        const timeSinceActivity = now - lastActivity;
+        const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
+        
+        if (timeSinceActivity < INACTIVITY_TIMEOUT + 30000 && 
+            (!pageHiddenTime || timeSinceHidden < OFFLINE_TIMEOUT + 30000)) {
+            // ✅ Session valid & OTP sudah diverifikasi → tampilkan dashboard
+            showScreen('dashboard-screen');
+            initializeDashboard();
+            startSessionManagement();
+            return;
+        }
+    }
+
+    // Kalau tidak valid / OTP belum diverifikasi → tetap tampilkan login
+    showScreen('login-screen');
+});
+
 
     // OTP functionality
     const otpInputs = document.querySelectorAll('.otp-input');
@@ -691,39 +722,28 @@ document.addEventListener('DOMContentLoaded', function() {
     const storedUserData = localStorage.getItem('userData');
     const now = Date.now();
     
-    if (loginTime && lastActivity && storedNik && storedUserData) {
-        // Parse stored user data
+if (loginTime && lastActivity && storedNik && storedUserData) {
+    const otpVerified = localStorage.getItem("isOtpVerified") === "true";
+
+    if (otpVerified) {
+        // OTP sudah diverifikasi → boleh ke dashboard
         try {
             const userData = JSON.parse(storedUserData);
             currentUser = userData;
         } catch (e) {
             currentUser = { nik: storedNik, name: 'User', role: 'Member', avatar: null };
         }
-        
-        // Check if session is still valid with grace period
-        const timeSinceActivity = now - lastActivity;
-        const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
-        
-        if (timeSinceActivity >= INACTIVITY_TIMEOUT + 30000) {
-            // Session expired but don't redirect yet
-            sessionExpired = true;
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            return;
-        } else if (pageHiddenTime && timeSinceHidden >= OFFLINE_TIMEOUT + 30000) {
-            // Session expired but don't redirect yet
-            sessionExpired = true;
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            return;
-        } else {
-            // Session is valid, restore user
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            startSessionManagement();
-            return;
-        }
+
+        showScreen('dashboard-screen');
+        initializeDashboard();
+        startSessionManagement();
+        return;
+    } else {
+        // OTP belum diverifikasi → tampilkan login lagi
+        showScreen('login-screen');
+        return;
     }
+}
     
     // No valid session, show login
     showScreen('login-screen');
