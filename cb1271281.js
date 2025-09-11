@@ -441,12 +441,13 @@ async function verifyOtp(otp) {
         // If OTP verification successful, update user data with any additional info
         if (data.success && data.user) {
             // Update currentUser with complete data from OTP verification
-            currentUser = {
-                ...currentUser,
-                name: data.user?.name || data.user?.username || data.user?.Nama || currentUser.name,
-                role: data.user?.role || data.user?.Role || currentUser.role,
-                avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || currentUser.avatar
-            };
+currentUser = {
+    ...currentUser,
+    name: data.user?.Username || data.user?.name || data.user?.username || data.user?.Nama || currentUser.name,
+    role: data.user?.Role || data.user?.role || currentUser.role,
+    avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || currentUser.avatar
+};
+
             
             // Update localStorage with complete user data
             localStorage.setItem("userData", JSON.stringify(currentUser));
