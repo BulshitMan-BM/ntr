@@ -134,51 +134,57 @@ function checkExistingSession() {
 }
 
 function autoLogout(reason) {
+    // Clear all timers
     if (sessionTimer) clearInterval(sessionTimer);
     if (otpTimer) clearInterval(otpTimer);
     if (resendTimer) clearInterval(resendTimer);
     if (visibilityChangeTimer) clearInterval(visibilityChangeTimer);
-
-    // Hapus hanya data session (JANGAN theme)
+    
+    // Clear session data
     localStorage.removeItem('loginTime');
     localStorage.removeItem('lastActivity');
     localStorage.removeItem('pageHiddenTime');
     localStorage.removeItem('userData');
     localStorage.removeItem('nik');
-
+    localStorage.removeItem('userData');
+    
+    // Reset user state
     currentUser = null;
-    resendAttempts = 0;
-
+    resendAttempts = 0; // Reset resend attempts
+    
+    // Redirect to login silently (no message)
     showScreen('login-screen');
     document.getElementById('login-form').reset();
     document.getElementById('login-error').classList.add('hidden');
-
+    
+    // Reset sidebar state
     sidebarExpanded = true;
     if (sidebar) {
         sidebar.style.width = '256px';
         header.style.left = '256px';
         mainContent.style.marginLeft = '256px';
     }
-
+    
+    // Hide any open modals
     hideOtpOverlay();
     hideLogoutModal();
 }
 
 function stopSessionManagement() {
     if (sessionTimer) clearInterval(sessionTimer);
-
+    
+    // Remove activity listeners
     const activities = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
     activities.forEach(activity => {
         document.removeEventListener(activity, updateLastActivity, true);
     });
-
-    // Hapus hanya session, JANGAN theme
+    
+    // Clear session data
     localStorage.removeItem('loginTime');
     localStorage.removeItem('lastActivity');
     localStorage.removeItem('pageHiddenTime');
     localStorage.removeItem('userData');
 }
-
 
 // === API LOGIN FUNCTION ===
 async function login() {
@@ -264,6 +270,14 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.remove('hidden');
 }
 
+// Screen management
+function showScreen(screenId) {
+    const screens = ['login-screen', 'dashboard-screen'];
+    screens.forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+    });
+    document.getElementById(screenId).classList.remove('hidden');
+}
 
 // OTP Overlay management
 function showOtpOverlay() {
@@ -328,18 +342,18 @@ function confirmLogout() {
 
 // Dashboard initialization
 function initializeDashboard() {
+    // Update user info
     if (currentUser) {
-        const displayName = currentUser.name || "User";
-        const displayRole = currentUser.role || "Member";
-
-        document.getElementById('userNameSidebar').textContent = displayName;
-        document.getElementById('userRoleSidebar').textContent = displayRole;
-        document.getElementById('mobile-user-name').textContent = displayName;
-        document.getElementById('dashboard-title').textContent = `Dashboard - ${displayName}`;
-
+        document.getElementById('userNameSidebar').textContent = currentUser.name;
+        document.getElementById('userRoleSidebar').textContent = currentUser.role;
+        document.getElementById('mobile-user-name').textContent = currentUser.name;
+        document.getElementById('dashboard-title').textContent = `Dashboard - ${currentUser.name}`;
+        
+        // Update profile images
         updateProfileImages();
     }
 
+    // Initialize dashboard functionality
     handleResize();
     updateNavToggleVisibility();
     initializeLogout();
@@ -425,6 +439,7 @@ function startOtpTimer() {
     }, 1000);
 }
 
+// === VERIFY OTP ===
 async function verifyOtp(otp) {
     const nik = localStorage.getItem("nik");
     
@@ -437,14 +452,18 @@ async function verifyOtp(otp) {
 
         const data = await res.json();
         
+        // If OTP verification successful, update user data with any additional info
         if (data.success && data.user) {
-            currentUser = {
-                ...currentUser,
-                name: data.user?.Username || data.user?.name || data.user?.username || data.user?.Nama || "User",
-                role: data.user?.Role || data.user?.role || "Member",
-                avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || null
-            };
+            // Update currentUser with complete data from OTP verification
+currentUser = {
+    ...currentUser,
+    name: data.user?.Username || data.user?.name || data.user?.username || data.user?.Nama || currentUser.name,
+    role: data.user?.Role || data.user?.role || currentUser.role,
+    avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || currentUser.avatar
+};
 
+            
+            // Update localStorage with complete user data
             localStorage.setItem("userData", JSON.stringify(currentUser));
         }
         
@@ -677,46 +696,45 @@ document.getElementById('login-dark-mode-toggle').addEventListener('click', func
 });
 
 
- // === Initialize app ===
-const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
-const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
-const pageHiddenTime = parseInt(localStorage.getItem('pageHiddenTime') || '0');
-const storedNik = localStorage.getItem('nik');
-const storedUserData = localStorage.getItem('userData');
-const now = Date.now();
-
-if (loginTime && lastActivity && storedNik && storedUserData) {
+    // Initialize app
+    const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
+    const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
+    const pageHiddenTime = parseInt(localStorage.getItem('pageHiddenTime') || '0');
+    const storedNik = localStorage.getItem('nik');
+    const storedUserData = localStorage.getItem('userData');
+    const now = Date.now();
+  if (loginTime && lastActivity && storedNik && storedUserData) {
     try {
         const userData = JSON.parse(storedUserData);
         currentUser = userData;
     } catch (e) {
-        currentUser = null; // 🚫 jangan pakai default user
+        currentUser = null; // 🚫 jangan isi default user
     }
 
+    const now = Date.now();
     const timeSinceActivity = now - lastActivity;
     const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
 
-    // ✅ user dianggap verified kalau ada nama (berarti OTP sukses)
-    const hasVerified = currentUser && currentUser.name;
+    const hasVerified = currentUser && currentUser.name; // ✅ OTP sukses baru true
 
     if (!hasVerified) {
-        // Belum OTP → paksa logout
+        // User belum OTP → balik ke login
         autoLogout();
         return;
     }
 
     if (timeSinceActivity >= INACTIVITY_TIMEOUT + 30000) {
-        // Session expired → balik ke login
         sessionExpired = true;
-        showScreen('login-screen');
+        showScreen('dashboard-screen');
+        initializeDashboard();
         return;
     } else if (pageHiddenTime && timeSinceHidden >= OFFLINE_TIMEOUT + 30000) {
-        // Session expired → balik ke login
         sessionExpired = true;
-        showScreen('login-screen');
+        showScreen('dashboard-screen');
+        initializeDashboard();
         return;
     } else {
-        // ✅ Session valid → lanjut dashboard
+        // Session valid
         showScreen('dashboard-screen');
         initializeDashboard();
         startSessionManagement();
@@ -724,5 +742,7 @@ if (loginTime && lastActivity && storedNik && storedUserData) {
     }
 }
 
-// 🚨 fallback kalau tidak ada session valid
-showScreen('login-screen');
+    
+    // No valid session, show login
+    showScreen('login-screen');
+});
