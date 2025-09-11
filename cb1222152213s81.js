@@ -537,28 +537,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Dark mode toggle
-    const darkIcon = document.getElementById('login-dark-mode-icon');
-    const darkToggle = document.getElementById('login-dark-mode-toggle');
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-        darkIcon.className = 'fas fa-sun';
-    } else {
-        document.documentElement.classList.remove('dark');
-        darkIcon.className = 'fas fa-moon';
-    }
-    darkToggle?.addEventListener('click', function() {
-        document.documentElement.classList.toggle('dark');
-        if (document.documentElement.classList.contains('dark')) {
-            darkIcon.className = 'fas fa-sun';
-            localStorage.setItem('theme', 'dark');
-        } else {
-            darkIcon.className = 'fas fa-moon';
-            localStorage.setItem('theme', 'light');
-        }
-    });
-
     // Login form
     document.getElementById('login-form').addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -582,7 +560,20 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('captcha').value = '';
             return;
         }
-
+    // ===== DARK MODE =====
+    const darkIcon = document.getElementById('login-dark-mode-icon');
+    const darkToggle = document.getElementById('login-dark-mode-toggle');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    if(savedTheme==='dark'){ document.documentElement.classList.add('dark'); darkIcon.className='fas fa-sun'; }
+    else{ document.documentElement.classList.remove('dark'); darkIcon.className='fas fa-moon'; }
+    darkToggle?.addEventListener('click', function(){
+        document.documentElement.classList.toggle('dark');
+        if(document.documentElement.classList.contains('dark')){
+            darkIcon.className='fas fa-sun'; localStorage.setItem('theme','dark');
+        }else{
+            darkIcon.className='fas fa-moon'; localStorage.setItem('theme','light');
+        }
+    });
         // Show loading
         loginBtn.disabled = true;
         loginBtnText.textContent = 'Memverifikasi...';
@@ -729,21 +720,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('otp-cancel').addEventListener('click', function() {
         hideOtpOverlay();
     });
-
-    // Dark mode for login
-document.getElementById('login-dark-mode-toggle')?.addEventListener('click', function() {
-    const icon = document.getElementById('login-dark-mode-icon');
-    document.documentElement.classList.toggle('dark');
-    
-    if (document.documentElement.classList.contains('dark')) {
-        icon.className = 'fas fa-sun';
-        localStorage.setItem('theme', 'dark');  // ✅ simpan preferensi
-    } else {
-        icon.className = 'fas fa-moon';
-        localStorage.setItem('theme', 'light'); // ✅ simpan preferensi
-    }
-});
-
 
     // Initialize app
     const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
