@@ -517,40 +517,81 @@ document.addEventListener('DOMContentLoaded', function() {
         document.documentElement.classList.remove('dark');
         document.getElementById('login-dark-mode-icon').className = 'fas fa-moon';
     }
-    document.getElementById('login-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const nik = document.getElementById('nik').value;
-        const password = document.getElementById('password').value;
-        const loginBtn = document.getElementById('login-btn');
-        const loginBtnText = document.getElementById('login-btn-text');
-        const loginSpinner = document.getElementById('login-spinner');
-        const loginError = document.getElementById('login-error');
+   // === CAPTCHA FUNCTIONALITY ===
+let currentCaptcha = '';
 
-        // Validate NIK format
-        if (nik.length !== 16 || !/^\d+$/.test(nik)) {
-            showLoginError('NIK harus berupa 16 digit angka');
-            return;
-        }
+function generateCaptcha() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    let captcha = '';
+    for (let i = 0; i < 6; i++) {
+        captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    currentCaptcha = captcha;
+    const captchaText = document.getElementById('captcha-text');
+    if (captchaText) captchaText.textContent = captcha;
+}
 
-        // Show loading
-        loginBtn.disabled = true;
-        loginBtnText.textContent = 'Memverifikasi...';
-        loginSpinner.style.display = 'inline-block';
-        loginError.classList.add('hidden');
+function validateCaptcha(input) {
+    return input === currentCaptcha;
+}
 
-        try {
-            // Call API login
-            await login();
-        } catch (error) {
-            showLoginError('Koneksi bermasalah. Silakan coba lagi.');
-        }
+// Initialize CAPTCHA on page load
+document.addEventListener('DOMContentLoaded', function() {
+    generateCaptcha();
 
-        // Reset button
-        loginBtn.disabled = false;
-        loginBtnText.textContent = 'Masuk';
-        loginSpinner.style.display = 'none';
-    });
+    const refreshCaptcha = document.getElementById('refresh-captcha');
+    if (refreshCaptcha) {
+        refreshCaptcha.addEventListener('click', function() {
+            generateCaptcha();
+            const captchaInput = document.getElementById('captcha');
+            if (captchaInput) captchaInput.value = '';
+        });
+    }
+});
+
+// === LOGIN FORM ===
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const nik = document.getElementById('nik').value;
+    const password = document.getElementById('password').value;
+    const captchaInput = document.getElementById('captcha').value;
+    const loginBtn = document.getElementById('login-btn');
+    const loginBtnText = document.getElementById('login-btn-text');
+    const loginSpinner = document.getElementById('login-spinner');
+    const loginError = document.getElementById('login-error');
+
+    // VALIDASI NIK
+    if (nik.length !== 16 || !/^\d+$/.test(nik)) {
+        showLoginError('NIK harus berupa 16 digit angka');
+        return;
+    }
+
+    // VALIDASI CAPTCHA
+    if (!validateCaptcha(captchaInput)) {
+        showLoginError('Captcha tidak sesuai');
+        generateCaptcha(); // refresh otomatis jika salah
+        return;
+    }
+
+    // SHOW LOADING
+    loginBtn.disabled = true;
+    loginBtnText.textContent = 'Memverifikasi...';
+    loginSpinner.style.display = 'inline-block';
+    loginError.classList.add('hidden');
+
+    try {
+        await login(); // fungsi login API kamu sudah ada
+    } catch (error) {
+        showLoginError('Koneksi bermasalah. Silakan coba lagi.');
+    }
+
+    // RESET BUTTON
+    loginBtn.disabled = false;
+    loginBtnText.textContent = 'Masuk';
+    loginSpinner.style.display = 'none';
+});
+
 
     // Password toggle
     document.getElementById('toggle-password').addEventListener('click', function() {
