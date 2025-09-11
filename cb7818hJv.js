@@ -152,29 +152,25 @@ async function login() {
 
     const res = await fetch(API_URL, {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "login", nik, password })
     });
 
     const data = await res.json();
+    console.log("Login Response:", data);
 
-    if (data.success && data.step === "otp") {
+    if (data.success && data.user) {
+        // simpan user sementara untuk OTP screen
+        localStorage.setItem("userData", JSON.stringify(data.user));
         localStorage.setItem("nik", nik);
-        
-        currentUser = { 
-            nik, 
-            name: data.user?.name || data.user?.username || data.user?.Nama || 'User',
-            role: data.user?.role || data.user?.Role || 'Member',
-            avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || null
-        };
-        
-        localStorage.setItem("userData", JSON.stringify(currentUser));
+        localStorage.setItem("isOtpVerified", "false");
+
         resendAttempts = 0;
         showOtpOverlay();
         startOtpTimer();
         startResendCooldown(60);
     } else {
-        showLoginError(data.message || 'Login gagal');
+        showLoginError(data.message || "Login gagal");
     }
 }
 
@@ -265,14 +261,19 @@ function confirmLogout() {
 }
 
 function initializeDashboard() {
-    if (currentUser) {
-        document.getElementById('userNameSidebar').textContent = currentUser.name;
-        document.getElementById('userRoleSidebar').textContent = currentUser.role;
-        document.getElementById('mobile-user-name').textContent = currentUser.name;
-        document.getElementById('dashboard-title').textContent = `Dashboard - ${currentUser.name}`;
-        updateProfileImages();
+    const userData = JSON.parse(localStorage.getItem("userData"));
+    if (!userData) return;
+
+    document.getElementById("userNameSidebar").textContent = userData.username || "User";
+    document.getElementById("userRoleSidebar").textContent = userData.role || "Member";
+    document.getElementById("mobile-user-name").textContent = userData.username || "User";
+    document.getElementById("dashboard-title").textContent = `Selamat datang, ${userData.username || "User"}`;
+
+    if (userData.avatar) {
+        document.getElementById("user-avatar").src = userData.avatar;
     }
-    
+
+    currentUser = userData; // supaya session management tahu
     initializeLogout();
 }
 
@@ -346,34 +347,41 @@ function startOtpTimer() {
 }
 
 async function verifyOtp(otp) {
-    const nik = localStorage.getItem("nik");
-    
+    const nik = JSON.parse(localStorage.getItem("userData"))?.nik;
+
     try {
         const res = await fetch(API_URL, {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "verify-otp", nik, otp })
         });
 
         const data = await res.json();
-        
+        console.log("OTP Response:", data);
+
         if (data.success && data.user) {
-            currentUser = {
-                ...currentUser,
-                name: data.user?.name || data.user?.username || data.user?.Nama || currentUser.name,
-                role: data.user?.role || data.user?.Role || currentUser.role,
-                avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || currentUser.avatar
+            // update data user final setelah OTP berhasil
+            const updatedUser = {
+                nik: data.user.NIK || data.user.nik || nik,
+                username: data.user.Username || data.user.username || "User",
+                email: data.user.Email || data.user.email || null,
+                role: data.user.Role || data.user.role || "Member",
+                avatar: data.user.ProfilAvatar || data.user.avatar || null
             };
-            
-            localStorage.setItem("userData", JSON.stringify(currentUser));
+
+            currentUser = updatedUser;
+            localStorage.setItem("userData", JSON.stringify(updatedUser));
             localStorage.setItem("isOtpVerified", "true");
+
+            return true;
         }
-        
-        return data.success;
+        return false;
     } catch (error) {
+        console.error("OTP verify error:", error);
         return false;
     }
 }
+
 
 async function resendOtp() {
     const nik = localStorage.getItem("nik");
