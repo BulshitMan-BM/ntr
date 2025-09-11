@@ -223,6 +223,43 @@ if (data.success && data.step === "otp") {
     }
 }
 
+function startResendCooldown(seconds) {
+    const resendBtn = document.getElementById('resend-otp');
+    let resendTimerElement = document.getElementById('resend-timer');
+
+    // Jika belum ada span di dalam tombol, buat
+    if (!resendTimerElement) {
+        resendBtn.innerHTML = `Kirim Ulang (<span id="resend-timer"></span>)`;
+        resendTimerElement = document.getElementById('resend-timer');
+    }
+
+    clearInterval(resendTimer);
+    let remaining = seconds;
+    resendBtn.disabled = true;
+
+    const formatTime = totalSeconds => {
+        if (totalSeconds >= 60) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const secs = totalSeconds % 60;
+            return secs > 0 ? `${minutes}m ${secs}s` : `${minutes}m`;
+        }
+        return `${totalSeconds}s`;
+    };
+
+    resendTimerElement.textContent = formatTime(remaining);
+
+    resendTimer = setInterval(() => {
+        remaining--;
+        if (remaining > 0) {
+            resendTimerElement.textContent = formatTime(remaining);
+        } else {
+            clearInterval(resendTimer);
+            resendBtn.disabled = false;
+            resendBtn.innerHTML = 'Kirim Ulang';
+        }
+    }, 1000);
+}
+
 function showScreen(screenId) {
     const screens = ['login-screen', 'dashboard-screen'];
 
@@ -238,6 +275,14 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.remove('hidden');
 }
 
+// Screen management
+function showScreen(screenId) {
+    const screens = ['login-screen', 'dashboard-screen'];
+    screens.forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+    });
+    document.getElementById(screenId).classList.remove('hidden');
+}
 
 // OTP Overlay management
 function showOtpOverlay() {
@@ -374,6 +419,12 @@ function showLoginError(message) {
     loginError.classList.remove('hidden');
 }
 
+function showOtpError(message) {
+    const otpError = document.getElementById('otp-error');
+    const otpErrorText = document.getElementById('otp-error-text');
+    otpErrorText.textContent = message;
+    otpError.classList.remove('hidden');
+}
 
 // OTP Timer - 2 minutes
 function startOtpTimer() {
@@ -421,12 +472,10 @@ async function verifyOtp(otp) {
     }
 }
 
-// === RESEND OTP PROGRESSIVE COOLDOWN ===
+// === RESEND OTP ===
 async function resendOtp() {
     const nik = localStorage.getItem("nik");
-    const resendBtn = document.getElementById('resend-otp');
-    const resendTimerElement = document.getElementById('resend-timer');
-
+    
     try {
         const res = await fetch(API_URL, {
             method: "POST",
@@ -435,70 +484,25 @@ async function resendOtp() {
         });
 
         const data = await res.json();
-
-        // Tampilkan pesan dari server (misal akun diblokir)
-        showOtpError(data.message || 'OTP telah dikirim ulang');
+        alert(data.message);
 
         // Increment resend attempts
         resendAttempts++;
-
-        // Hitung cooldown progresif: 1st = 5m, 2nd = 10m, 3rd = 15m
-        const cooldownSeconds = resendAttempts * 5 * 60; // 5 menit * attempt number
-
-        // Start countdown di tombol
+        
+        // Calculate progressive cooldown
+        // 1st resend: 5 minutes (300s)
+        // 2nd resend: 10 minutes (600s)  
+        // 3rd resend: 15 minutes (900s)
+        // And so on...
+        const cooldownSeconds = resendAttempts * 5 * 60; // 5 minutes * attempt number
+        
+        
+        // Start progressive cooldown
         startResendCooldown(cooldownSeconds);
-
+        
     } catch (error) {
-        showOtpError('Gagal mengirim ulang OTP. Silakan coba lagi.');
+        alert('Gagal mengirim ulang OTP. Silakan coba lagi.');
     }
-}
-
-// === START RESEND COUNTDOWN ===
-function startResendCooldown(seconds) {
-    const resendBtn = document.getElementById('resend-otp');
-    let resendTimerElement = document.getElementById('resend-timer');
-
-    // Jika span belum ada, buat
-    if (!resendTimerElement) {
-        resendBtn.innerHTML = `Kirim Ulang (<span id="resend-timer"></span>)`;
-        resendTimerElement = document.getElementById('resend-timer');
-    }
-
-    clearInterval(resendTimer);
-    let remaining = seconds;
-    resendBtn.disabled = true;
-
-    const formatTime = totalSeconds => {
-        if (totalSeconds >= 60) {
-            const minutes = Math.floor(totalSeconds / 60);
-            const secs = totalSeconds % 60;
-            return secs > 0 ? `${minutes}m ${secs}s` : `${minutes}m`;
-        }
-        return `${totalSeconds}s`;
-    };
-
-    resendTimerElement.textContent = formatTime(remaining);
-
-    resendTimer = setInterval(() => {
-        remaining--;
-        if (remaining > 0) {
-            resendTimerElement.textContent = formatTime(remaining);
-        } else {
-            clearInterval(resendTimer);
-            resendBtn.disabled = false;
-            resendBtn.innerHTML = 'Kirim Ulang';
-        }
-    }, 1000);
-}
-
-// === Tampilkan error OTP atau pesan dari server ===
-function showOtpError(message) {
-    const otpError = document.getElementById('otp-error');
-    const otpErrorText = document.getElementById('otp-error-text');
-    if (!otpError || !otpErrorText) return;
-
-    otpErrorText.textContent = message;
-    otpError.classList.remove('hidden');
 }
 // ===== CAPTCHA =====
 let currentCaptcha = '';
@@ -690,6 +694,7 @@ document.getElementById('refresh-captcha')?.addEventListener('click', function()
     });
 });
 
+
     // Resend OTP
     document.getElementById('resend-otp').addEventListener('click', resendOtp);
 
@@ -727,6 +732,8 @@ document.getElementById('login-dark-mode-toggle')?.addEventListener('click', fun
     } catch (e) {
         currentUser = null; // 🚫 jangan isi default user
     }
+
+    const now = Date.now();
     const timeSinceActivity = now - lastActivity;
     const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
 
