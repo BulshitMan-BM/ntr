@@ -2,44 +2,30 @@
 let currentUser = null;
 let otpTimer = null;
 let resendTimer = null;
-let resendAttempts = 0; // Track resend attempts for progressive cooldown
-
-// Session Management
+let resendAttempts = 0;
 let sessionTimer = null;
 let lastActivityTime = Date.now();
 let isUserActive = true;
 let visibilityChangeTimer = null;
 
 // Configuration
-const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes of inactivity
-const OFFLINE_TIMEOUT = 2 * 60 * 1000; // 2 minutes offline/tab closed
-const ACTIVITY_CHECK_INTERVAL = 30 * 1000; // Check every 30 seconds
-
-// API Configuration
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000;
+const OFFLINE_TIMEOUT = 2 * 60 * 1000;
+const ACTIVITY_CHECK_INTERVAL = 30 * 1000;
 const API_URL = "https://test.bulshitman1.workers.dev";
 
 // === SESSION MANAGEMENT ===
 function startSessionManagement() {
-    // Save login time
     localStorage.setItem('loginTime', Date.now().toString());
     localStorage.setItem('lastActivity', Date.now().toString());
-    
-    // Start activity monitoring
     startActivityMonitoring();
-    
-    // Start session timer
     startSessionTimer();
-    
-    // Monitor page visibility
     startVisibilityMonitoring();
-    
-    // Check for existing session on page load
     checkExistingSession();
 }
 
 function startActivityMonitoring() {
     const activities = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
     activities.forEach(activity => {
         document.addEventListener(activity, updateLastActivity, true);
     });
@@ -58,37 +44,30 @@ function startSessionTimer() {
         const now = Date.now();
         const timeSinceActivity = now - lastActivityTime;
         
-        // Check for inactivity timeout with grace period
         if (timeSinceActivity >= INACTIVITY_TIMEOUT) {
-            // Give 30 seconds grace period to resume activity
             if (timeSinceActivity >= INACTIVITY_TIMEOUT + 30000) {
                 autoLogout();
                 return;
             }
         }
         
-        // Check if user was offline too long with grace period
         const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
         const offlineTime = now - lastActivity;
         
         if (offlineTime >= OFFLINE_TIMEOUT && !document.hidden) {
-            // Give 30 seconds grace period after coming back online
             if (offlineTime >= OFFLINE_TIMEOUT + 30000) {
                 autoLogout();
                 return;
             }
         }
-        
     }, ACTIVITY_CHECK_INTERVAL);
 }
 
 function startVisibilityMonitoring() {
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
-            // Page became hidden (tab switched, minimized, etc.)
             localStorage.setItem('pageHiddenTime', Date.now().toString());
         } else {
-            // Page became visible again
             const hiddenTime = parseInt(localStorage.getItem('pageHiddenTime') || '0');
             const now = Date.now();
             const offlineDuration = now - hiddenTime;
@@ -97,13 +76,10 @@ function startVisibilityMonitoring() {
                 autoLogout();
                 return;
             }
-            
-            // Update activity when page becomes visible
             updateLastActivity();
         }
     });
     
-    // Handle page unload
     window.addEventListener('beforeunload', () => {
         localStorage.setItem('pageHiddenTime', Date.now().toString());
     });
@@ -117,55 +93,39 @@ function checkExistingSession() {
     
     if (!loginTime || !currentUser) return;
     
-    // Check if last activity was too long ago with grace period
     if (lastActivity && (now - lastActivity) >= INACTIVITY_TIMEOUT + 30000) {
         autoLogout();
         return;
     }
     
-    // Check if page was hidden too long with grace period
     if (pageHiddenTime && (now - pageHiddenTime) >= OFFLINE_TIMEOUT + 30000) {
         autoLogout();
         return;
     }
     
-    // Update activity time
     updateLastActivity();
 }
 
 function autoLogout(reason) {
-    // Clear all timers
     if (sessionTimer) clearInterval(sessionTimer);
     if (otpTimer) clearInterval(otpTimer);
     if (resendTimer) clearInterval(resendTimer);
     if (visibilityChangeTimer) clearInterval(visibilityChangeTimer);
     
-    // Clear session data
     localStorage.removeItem('loginTime');
     localStorage.removeItem('lastActivity');
     localStorage.removeItem('pageHiddenTime');
     localStorage.removeItem('userData');
     localStorage.removeItem('nik');
-    localStorage.removeItem('userData');
+    localStorage.removeItem('isOtpVerified');
     
-    // Reset user state
     currentUser = null;
-    resendAttempts = 0; // Reset resend attempts
+    resendAttempts = 0;
     
-    // Redirect to login silently (no message)
     showScreen('login-screen');
     document.getElementById('login-form').reset();
     document.getElementById('login-error').classList.add('hidden');
     
-    // Reset sidebar state
-    sidebarExpanded = true;
-    if (sidebar) {
-        sidebar.style.width = '256px';
-        header.style.left = '256px';
-        mainContent.style.marginLeft = '256px';
-    }
-    
-    // Hide any open modals
     hideOtpOverlay();
     hideLogoutModal();
 }
@@ -173,17 +133,16 @@ function autoLogout(reason) {
 function stopSessionManagement() {
     if (sessionTimer) clearInterval(sessionTimer);
     
-    // Remove activity listeners
     const activities = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
     activities.forEach(activity => {
         document.removeEventListener(activity, updateLastActivity, true);
     });
     
-    // Clear session data
     localStorage.removeItem('loginTime');
     localStorage.removeItem('lastActivity');
     localStorage.removeItem('pageHiddenTime');
     localStorage.removeItem('userData');
+    localStorage.removeItem('isOtpVerified');
 }
 
 // === API LOGIN FUNCTION ===
@@ -202,7 +161,6 @@ async function login() {
     if (data.success && data.step === "otp") {
         localStorage.setItem("nik", nik);
         
-        // Store comprehensive user data from API response
         currentUser = { 
             nik, 
             name: data.user?.name || data.user?.username || data.user?.Nama || 'User',
@@ -210,24 +168,16 @@ async function login() {
             avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || null
         };
         
-        // Debug log to verify avatar URL is captured
-        
         localStorage.setItem("userData", JSON.stringify(currentUser));
-        
-        // Reset resend attempts on new login
         resendAttempts = 0;
-        
         showOtpOverlay();
         startOtpTimer();
-        
-        // Initial resend cooldown: 1 minute
         startResendCooldown(60);
     } else {
         showLoginError(data.message || 'Login gagal');
     }
 }
 
-// Smart Resend Cooldown with progressive timing
 function startResendCooldown(seconds) {
     const resendBtn = document.getElementById('resend-otp');
     const resendTimerElement = document.getElementById('resend-timer');
@@ -236,7 +186,6 @@ function startResendCooldown(seconds) {
     let remaining = seconds;
     resendBtn.disabled = true;
     
-    // Format initial display
     const formatTime = (totalSeconds) => {
         if (totalSeconds >= 60) {
             const minutes = Math.floor(totalSeconds / 60);
@@ -260,7 +209,6 @@ function startResendCooldown(seconds) {
     }, 1000);
 }
 
-// Screen management
 function showScreen(screenId) {
     const screens = ['login-screen', 'dashboard-screen'];
     screens.forEach(id => {
@@ -269,11 +217,9 @@ function showScreen(screenId) {
     document.getElementById(screenId).classList.remove('hidden');
 }
 
-// OTP Overlay management
 function showOtpOverlay() {
     document.getElementById('otp-overlay').classList.add('active');
     document.body.style.overflow = 'hidden';
-    // Focus first OTP input
     setTimeout(() => {
         document.querySelector('.otp-input').focus();
     }, 300);
@@ -284,15 +230,13 @@ function hideOtpOverlay() {
     document.body.style.overflow = '';
     clearInterval(otpTimer);
     clearInterval(resendTimer);
-    resendAttempts = 0; // Reset resend attempts when closing OTP
-    // Clear OTP inputs
+    resendAttempts = 0;
     document.querySelectorAll('.otp-input').forEach(input => {
         input.value = '';
         input.classList.remove('filled');
     });
 }
 
-// Logout Modal Management
 function showLogoutModal() {
     document.getElementById('logout-modal').classList.add('active');
     document.body.style.overflow = 'hidden';
@@ -303,84 +247,57 @@ function hideLogoutModal() {
     document.body.style.overflow = '';
 }
 
-// Logout functionality
 function handleLogout() {
     showLogoutModal();
 }
 
 function confirmLogout() {
-    // Stop session management
     stopSessionManagement();
-    
     currentUser = null;
-    resendAttempts = 0; // Reset resend attempts
+    resendAttempts = 0;
     hideLogoutModal();
     showScreen('login-screen');
     document.getElementById('login-form').reset();
     document.getElementById('login-error').classList.add('hidden');
-    // Reset sidebar state
-    sidebarExpanded = true;
-    sidebar.style.width = '256px';
-    header.style.left = '256px';
-    mainContent.style.marginLeft = '256px';
-    // Clear any timers
     if (otpTimer) clearInterval(otpTimer);
     if (resendTimer) clearInterval(resendTimer);
-    // Hide OTP overlay if open
     hideOtpOverlay();
 }
 
-// Dashboard initialization
 function initializeDashboard() {
-    // Update user info
     if (currentUser) {
         document.getElementById('userNameSidebar').textContent = currentUser.name;
         document.getElementById('userRoleSidebar').textContent = currentUser.role;
         document.getElementById('mobile-user-name').textContent = currentUser.name;
         document.getElementById('dashboard-title').textContent = `Dashboard - ${currentUser.name}`;
-        
-        // Update profile images
         updateProfileImages();
     }
-
-    // Initialize dashboard functionality
-    handleResize();
-    updateNavToggleVisibility();
-    initializeLogout();
     
-    setTimeout(() => {
-        setNavigationHeight();
-    }, 100);
+    initializeLogout();
 }
 
-// Update profile images with avatar from API
 function updateProfileImages() {
     const sidebarProfileImage = document.getElementById('sidebarProfileImage');
     const headerProfileImage = document.querySelector('header .w-8.h-8.bg-blue-600');
     const mobileProfileContainer = document.querySelector('#mobile-nav-overlay .w-12.h-12.bg-gradient-to-r');
     
     if (currentUser && currentUser.avatar) {
-        // Construct avatar URL using your API endpoint
         const avatarUrl = `https://test.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(currentUser.avatar)}`;
         
-        // Create image element for sidebar
         if (sidebarProfileImage) {
-            sidebarProfileImage.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-full h-full object-cover rounded-full" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class="fas fa-user text-white text-sm\\"></i>`;
+            sidebarProfileImage.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-full h-full object-cover rounded-full" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class="fas fa-user text-white text-sm\\"></i>'">`;
         }
         
-        // Create image element for header
         if (headerProfileImage) {
-            headerProfileImage.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-full h-full object-cover rounded-full" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-user text-white text-sm\\"></i>`;
+            headerProfileImage.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-full h-full object-cover rounded-full" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-user text-white text-sm\\"></i>'">`;
         }
         
-        // Create image element for mobile nav
         if (mobileProfileContainer) {
-            mobileProfileContainer.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-full h-full object-cover rounded-full" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-user text-white\\"></i>`;
+            mobileProfileContainer.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="w-full h-full object-cover rounded-full" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\"fas fa-user text-white\\"></i>'">`;
         }
     }
 }
 
-// Add logout event listeners after dashboard initialization
 function initializeLogout() {
     const logoutBtn = document.getElementById('logout-btn');
     const logoutCancel = document.getElementById('logout-cancel');
@@ -411,9 +328,8 @@ function showOtpError(message) {
     otpError.classList.remove('hidden');
 }
 
-// OTP Timer - 2 minutes
 function startOtpTimer() {
-    let timeLeft = 120; // 2 minutes
+    let timeLeft = 120;
     const timerElement = document.getElementById('otp-timer');
     
     otpTimer = setInterval(() => {
@@ -429,7 +345,6 @@ function startOtpTimer() {
     }, 1000);
 }
 
-// === VERIFY OTP ===
 async function verifyOtp(otp) {
     const nik = localStorage.getItem("nik");
     
@@ -442,9 +357,7 @@ async function verifyOtp(otp) {
 
         const data = await res.json();
         
-        // If OTP verification successful, update user data with any additional info
         if (data.success && data.user) {
-            // Update currentUser with complete data from OTP verification
             currentUser = {
                 ...currentUser,
                 name: data.user?.name || data.user?.username || data.user?.Nama || currentUser.name,
@@ -452,21 +365,16 @@ async function verifyOtp(otp) {
                 avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || currentUser.avatar
             };
             
-            // Debug log to verify final avatar URL
-            
-            // Update localStorage with complete user data
             localStorage.setItem("userData", JSON.stringify(currentUser));
             localStorage.setItem("isOtpVerified", "true");
         }
         
         return data.success;
     } catch (error) {
-// console.error('OTP Verification Error:', error);
         return false;
     }
 }
 
-// === RESEND OTP ===
 async function resendOtp() {
     const nik = localStorage.getItem("nik");
     
@@ -480,28 +388,18 @@ async function resendOtp() {
         const data = await res.json();
         alert(data.message);
 
-        // Increment resend attempts
         resendAttempts++;
-        
-        // Calculate progressive cooldown
-        // 1st resend: 5 minutes (300s)
-        // 2nd resend: 10 minutes (600s)  
-        // 3rd resend: 15 minutes (900s)
-        // And so on...
-        const cooldownSeconds = resendAttempts * 5 * 60; // 5 minutes * attempt number
- 
-        // Start progressive cooldown
+        const cooldownSeconds = resendAttempts * 5 * 60;
         startResendCooldown(cooldownSeconds);
         
     } catch (error) {
-  // console.error('Resend OTP Error:', error);
         alert('Gagal mengirim ulang OTP. Silakan coba lagi.');
     }
 }
 
-// Initialize login functionality when DOM is loaded
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // === Login form handler ===
+    // Login form handler
     document.getElementById('login-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -512,32 +410,28 @@ document.addEventListener('DOMContentLoaded', function() {
         const loginSpinner = document.getElementById('login-spinner');
         const loginError = document.getElementById('login-error');
 
-        // Validate NIK format
         if (nik.length !== 16 || !/^\d+$/.test(nik)) {
             showLoginError('NIK harus berupa 16 digit angka');
             return;
         }
 
-        // Show loading
         loginBtn.disabled = true;
         loginBtnText.textContent = 'Memverifikasi...';
         loginSpinner.style.display = 'inline-block';
         loginError.classList.add('hidden');
 
         try {
-            // Call API login
             await login();
         } catch (error) {
             showLoginError('Koneksi bermasalah. Silakan coba lagi.');
         }
 
-        // Reset button
         loginBtn.disabled = false;
         loginBtnText.textContent = 'Masuk';
         loginSpinner.style.display = 'none';
     });
 
-    // === Password toggle ===
+    // Password toggle
     document.getElementById('toggle-password').addEventListener('click', function() {
         const passwordInput = document.getElementById('password');
         const icon = this.querySelector('i');
@@ -551,42 +445,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // === Session & OTP check ===
-    const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
-    const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
-    const pageHiddenTime = parseInt(localStorage.getItem('pageHiddenTime') || '0');
-    const storedNik = localStorage.getItem('nik');
-    const storedUserData = localStorage.getItem('userData');
-    const isOtpVerified = localStorage.getItem('isOtpVerified') === 'true'; // ✅ cek OTP
-    const now = Date.now();
-    
-    if (loginTime && lastActivity && storedNik && storedUserData && isOtpVerified) {
-        // Restore user data
-        try {
-            currentUser = JSON.parse(storedUserData);
-        } catch (e) {
-            currentUser = { nik: storedNik, name: 'User', role: 'Member', avatar: null };
-        }
-
-        // Check validitas session
-        const timeSinceActivity = now - lastActivity;
-        const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
-        
-        if (timeSinceActivity < INACTIVITY_TIMEOUT + 30000 && 
-            (!pageHiddenTime || timeSinceHidden < OFFLINE_TIMEOUT + 30000)) {
-            // ✅ Session valid & OTP sudah diverifikasi → tampilkan dashboard
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            startSessionManagement();
-            return;
-        }
-    }
-
-    // Kalau tidak valid / OTP belum diverifikasi → tetap tampilkan login
-    showScreen('login-screen');
-});
-
-
     // OTP functionality
     const otpInputs = document.querySelectorAll('.otp-input');
     
@@ -594,25 +452,21 @@ document.addEventListener('DOMContentLoaded', function() {
         input.addEventListener('input', function(e) {
             const value = e.target.value;
             
-            // Only allow numbers
             if (!/^\d*$/.test(value)) {
                 e.target.value = '';
                 return;
             }
 
-            // Add filled class
             if (value) {
                 e.target.classList.add('filled');
             } else {
                 e.target.classList.remove('filled');
             }
 
-            // Auto focus next input
             if (value && index < otpInputs.length - 1) {
                 otpInputs[index + 1].focus();
             }
 
-            // Auto submit when all filled
             const allFilled = Array.from(otpInputs).every(input => input.value);
             if (allFilled) {
                 setTimeout(() => {
@@ -622,7 +476,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         input.addEventListener('keydown', function(e) {
-            // Handle backspace
             if (e.key === 'Backspace' && !e.target.value && index > 0) {
                 otpInputs[index - 1].focus();
                 otpInputs[index - 1].value = '';
@@ -650,6 +503,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // OTP form submission
     document.getElementById('otp-form').addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -664,13 +518,11 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Show loading
         otpBtn.disabled = true;
         otpBtnText.textContent = 'Memverifikasi...';
         otpSpinner.style.display = 'inline-block';
         otpError.classList.add('hidden');
 
-        // Call API for OTP verification
         verifyOtp(otpValue).then(success => {
             if (success) {
                 hideOtpOverlay();
@@ -679,7 +531,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 startSessionManagement();
             } else {
                 showOtpError('Kode OTP tidak valid');
-                // Clear OTP inputs
                 otpInputs.forEach(input => {
                     input.value = '';
                     input.classList.remove('filled');
@@ -687,7 +538,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 otpInputs[0].focus();
             }
 
-            // Reset button
             otpBtn.disabled = false;
             otpBtnText.textContent = 'Verifikasi';
             otpSpinner.style.display = 'none';
@@ -714,37 +564,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Initialize app
+    // Session check on page load
     const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
     const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
     const pageHiddenTime = parseInt(localStorage.getItem('pageHiddenTime') || '0');
     const storedNik = localStorage.getItem('nik');
     const storedUserData = localStorage.getItem('userData');
+    const isOtpVerified = localStorage.getItem('isOtpVerified') === 'true';
     const now = Date.now();
     
-if (loginTime && lastActivity && storedNik && storedUserData) {
-    const otpVerified = localStorage.getItem("isOtpVerified") === "true";
-
-    if (otpVerified) {
-        // OTP sudah diverifikasi → boleh ke dashboard
+    if (loginTime && lastActivity && storedNik && storedUserData && isOtpVerified) {
         try {
-            const userData = JSON.parse(storedUserData);
-            currentUser = userData;
+            currentUser = JSON.parse(storedUserData);
         } catch (e) {
             currentUser = { nik: storedNik, name: 'User', role: 'Member', avatar: null };
         }
 
-        showScreen('dashboard-screen');
-        initializeDashboard();
-        startSessionManagement();
-        return;
-    } else {
-        // OTP belum diverifikasi → tampilkan login lagi
-        showScreen('login-screen');
-        return;
+        const timeSinceActivity = now - lastActivity;
+        const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
+        
+        if (timeSinceActivity < INACTIVITY_TIMEOUT + 30000 && 
+            (!pageHiddenTime || timeSinceHidden < OFFLINE_TIMEOUT + 30000)) {
+            showScreen('dashboard-screen');
+            initializeDashboard();
+            startSessionManagement();
+            return;
+        }
     }
-}
-    
-    // No valid session, show login
+
     showScreen('login-screen');
 });
