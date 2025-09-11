@@ -682,7 +682,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Dark mode for login
-document.getElementById('login-dark-mode-toggle').addEventListener('click', function() {
+document.getElementById('login-dark-mode-toggle')?.addEventListener('click', function() {
     const icon = document.getElementById('login-dark-mode-icon');
     document.documentElement.classList.toggle('dark');
     
