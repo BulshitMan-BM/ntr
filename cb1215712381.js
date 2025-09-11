@@ -677,45 +677,46 @@ document.getElementById('login-dark-mode-toggle').addEventListener('click', func
 });
 
 
-    // Initialize app
-    const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
-    const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
-    const pageHiddenTime = parseInt(localStorage.getItem('pageHiddenTime') || '0');
-    const storedNik = localStorage.getItem('nik');
-    const storedUserData = localStorage.getItem('userData');
-    const now = Date.now();
-  if (loginTime && lastActivity && storedNik && storedUserData) {
+ // === Initialize app ===
+const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
+const lastActivity = parseInt(localStorage.getItem('lastActivity') || '0');
+const pageHiddenTime = parseInt(localStorage.getItem('pageHiddenTime') || '0');
+const storedNik = localStorage.getItem('nik');
+const storedUserData = localStorage.getItem('userData');
+const now = Date.now();
+
+if (loginTime && lastActivity && storedNik && storedUserData) {
     try {
         const userData = JSON.parse(storedUserData);
         currentUser = userData;
     } catch (e) {
-        currentUser = null; // 🚫 jangan isi default user
+        currentUser = null; // 🚫 jangan pakai default user
     }
 
-    const now = Date.now();
     const timeSinceActivity = now - lastActivity;
     const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
 
-    const hasVerified = currentUser && currentUser.name; // ✅ OTP sukses baru true
+    // ✅ user dianggap verified kalau ada nama (berarti OTP sukses)
+    const hasVerified = currentUser && currentUser.name;
 
     if (!hasVerified) {
-        // User belum OTP → balik ke login
+        // Belum OTP → paksa logout
         autoLogout();
         return;
     }
 
     if (timeSinceActivity >= INACTIVITY_TIMEOUT + 30000) {
+        // Session expired → balik ke login
         sessionExpired = true;
-        showScreen('dashboard-screen');
-        initializeDashboard();
+        showScreen('login-screen');
         return;
     } else if (pageHiddenTime && timeSinceHidden >= OFFLINE_TIMEOUT + 30000) {
+        // Session expired → balik ke login
         sessionExpired = true;
-        showScreen('dashboard-screen');
-        initializeDashboard();
+        showScreen('login-screen');
         return;
     } else {
-        // Session valid
+        // ✅ Session valid → lanjut dashboard
         showScreen('dashboard-screen');
         initializeDashboard();
         startSessionManagement();
@@ -723,7 +724,5 @@ document.getElementById('login-dark-mode-toggle').addEventListener('click', func
     }
 }
 
-    
-    // No valid session, show login
-    showScreen('login-screen');
-});
+// 🚨 fallback kalau tidak ada session valid
+showScreen('login-screen');
