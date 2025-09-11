@@ -199,19 +199,16 @@ async function login() {
 
     const data = await res.json();
 
-    if (data.success && data.step === "otp") {
-        localStorage.setItem("nik", nik);
-        
-        // Store comprehensive user data from API response
-        currentUser = { 
-            nik, 
-            name: data.user?.name || data.user?.username || data.user?.Nama || 'User',
-            role: data.user?.role || data.user?.Role || 'Member',
-            avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || null
-        };
-        
-        
-        localStorage.setItem("userData", JSON.stringify(currentUser));
+if (data.success && data.step === "otp") {
+    localStorage.setItem("nik", nik);
+    
+    // Store comprehensive user data from API response
+    currentUser = { 
+        nik,
+        email: data.user?.email || '' 
+    };
+    
+    localStorage.setItem("userData", JSON.stringify(currentUser));
         
         // Reset resend attempts on new login
         resendAttempts = 0;
