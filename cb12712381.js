@@ -255,6 +255,20 @@ function startResendCooldown(seconds) {
         }
     }, 1000);
 }
+function showScreen(screenId) {
+    const screens = ['login-screen', 'dashboard-screen'];
+
+    // 🚨 Cek validasi sebelum boleh buka dashboard
+    if (screenId === 'dashboard-screen' && (!currentUser || !currentUser.name)) {
+        // User belum OTP → jangan kasih buka dashboard
+        screenId = 'login-screen';
+    }
+
+    screens.forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+    });
+    document.getElementById(screenId).classList.remove('hidden');
+}
 
 // Screen management
 function showScreen(screenId) {
@@ -689,40 +703,45 @@ document.getElementById('login-dark-mode-toggle').addEventListener('click', func
     const storedNik = localStorage.getItem('nik');
     const storedUserData = localStorage.getItem('userData');
     const now = Date.now();
-    
-    if (loginTime && lastActivity && storedNik && storedUserData) {
-        // Parse stored user data
-        try {
-            const userData = JSON.parse(storedUserData);
-            currentUser = userData;
-        } catch (e) {
-            currentUser = { nik: storedNik, name: 'User', role: 'Member', avatar: null };
-        }
-        
-        // Check if session is still valid with grace period
-        const timeSinceActivity = now - lastActivity;
-        const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
-        
-        if (timeSinceActivity >= INACTIVITY_TIMEOUT + 30000) {
-            // Session expired but don't redirect yet
-            sessionExpired = true;
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            return;
-        } else if (pageHiddenTime && timeSinceHidden >= OFFLINE_TIMEOUT + 30000) {
-            // Session expired but don't redirect yet
-            sessionExpired = true;
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            return;
-        } else {
-            // Session is valid, restore user
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            startSessionManagement();
-            return;
-        }
+  if (loginTime && lastActivity && storedNik && storedUserData) {
+    try {
+        const userData = JSON.parse(storedUserData);
+        currentUser = userData;
+    } catch (e) {
+        currentUser = null; // 🚫 jangan isi default user
     }
+
+    const now = Date.now();
+    const timeSinceActivity = now - lastActivity;
+    const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
+
+    const hasVerified = currentUser && currentUser.name; // ✅ OTP sukses baru true
+
+    if (!hasVerified) {
+        // User belum OTP → balik ke login
+        autoLogout();
+        return;
+    }
+
+    if (timeSinceActivity >= INACTIVITY_TIMEOUT + 30000) {
+        sessionExpired = true;
+        showScreen('dashboard-screen');
+        initializeDashboard();
+        return;
+    } else if (pageHiddenTime && timeSinceHidden >= OFFLINE_TIMEOUT + 30000) {
+        sessionExpired = true;
+        showScreen('dashboard-screen');
+        initializeDashboard();
+        return;
+    } else {
+        // Session valid
+        showScreen('dashboard-screen');
+        initializeDashboard();
+        startSessionManagement();
+        return;
+    }
+}
+
     
     // No valid session, show login
     showScreen('login-screen');
