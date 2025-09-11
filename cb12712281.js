@@ -494,6 +494,15 @@ async function resendOtp() {
 
 // Initialize login functionality when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+        // === THEME INITIALIZATION ===
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.getElementById('login-dark-mode-icon').className = 'fas fa-sun';
+    } else {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('login-dark-mode-icon').className = 'fas fa-moon';
+    }
     document.getElementById('login-form').addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -659,16 +668,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Dark mode for login
-    document.getElementById('login-dark-mode-toggle').addEventListener('click', function() {
-        const icon = document.getElementById('login-dark-mode-icon');
-        document.documentElement.classList.toggle('dark');
-        
-        if (document.documentElement.classList.contains('dark')) {
-            icon.className = 'fas fa-sun';
-        } else {
-            icon.className = 'fas fa-moon';
-        }
-    });
+document.getElementById('login-dark-mode-toggle').addEventListener('click', function() {
+    const icon = document.getElementById('login-dark-mode-icon');
+    document.documentElement.classList.toggle('dark');
+    
+    if (document.documentElement.classList.contains('dark')) {
+        icon.className = 'fas fa-sun';
+        localStorage.setItem('theme', 'dark');  // ✅ simpan preferensi
+    } else {
+        icon.className = 'fas fa-moon';
+        localStorage.setItem('theme', 'light'); // ✅ simpan preferensi
+    }
+});
+
 
     // Initialize app
     const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
