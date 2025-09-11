@@ -210,9 +210,6 @@ async function login() {
             avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || null
         };
         
-        // Debug log to verify avatar URL is captured
-        console.log('User data captured:', currentUser);
-        console.log('Avatar URL:', currentUser.avatar);
         
         localStorage.setItem("userData", JSON.stringify(currentUser));
         
@@ -454,17 +451,12 @@ async function verifyOtp(otp) {
                 avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || currentUser.avatar
             };
             
-            // Debug log to verify final avatar URL
-            console.log('Final user data after OTP:', currentUser);
-            console.log('Final avatar URL:', currentUser.avatar);
-            
             // Update localStorage with complete user data
             localStorage.setItem("userData", JSON.stringify(currentUser));
         }
         
         return data.success;
     } catch (error) {
-        console.error('OTP Verification Error:', error);
         return false;
     }
 }
@@ -493,13 +485,11 @@ async function resendOtp() {
         // And so on...
         const cooldownSeconds = resendAttempts * 5 * 60; // 5 minutes * attempt number
         
-        console.log(`Resend attempt #${resendAttempts}, cooldown: ${cooldownSeconds / 60} minutes`);
         
         // Start progressive cooldown
         startResendCooldown(cooldownSeconds);
         
     } catch (error) {
-        console.error('Resend OTP Error:', error);
         alert('Gagal mengirim ulang OTP. Silakan coba lagi.');
     }
 }
@@ -532,7 +522,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Call API login
             await login();
         } catch (error) {
-            console.error('API Error:', error);
             showLoginError('Koneksi bermasalah. Silakan coba lagi.');
         }
 
