@@ -160,10 +160,20 @@ async function login() {
     console.log("Login Response:", data);
 
     if (data.success && data.user) {
-        // simpan user sementara untuk OTP screen
-        localStorage.setItem("userData", JSON.stringify(data.user));
+        // Simpan user langsung dengan avatar dari login
+        const loginUser = {
+            nik: data.user.NIK || data.user.nik || nik,
+            username: data.user.Username || data.user.username || "User",
+            email: data.user.Email || data.user.email || null,
+            role: data.user.Role || data.user.role || "Member",
+            avatar: data.user.ProfilAvatar || data.user.avatar || null
+        };
+
+        localStorage.setItem("userData", JSON.stringify(loginUser));
         localStorage.setItem("nik", nik);
         localStorage.setItem("isOtpVerified", "false");
+
+        currentUser = loginUser;
 
         resendAttempts = 0;
         showOtpOverlay();
@@ -173,6 +183,7 @@ async function login() {
         showLoginError(data.message || "Login gagal");
     }
 }
+
 
 function startResendCooldown(seconds) {
     const resendBtn = document.getElementById('resend-otp');
@@ -346,6 +357,7 @@ function startOtpTimer() {
     }, 1000);
 }
 
+// === VERIFY OTP ===
 async function verifyOtp(otp) {
     const nik = JSON.parse(localStorage.getItem("userData"))?.nik;
 
@@ -359,15 +371,14 @@ async function verifyOtp(otp) {
         const data = await res.json();
         console.log("OTP Response:", data);
 
-        if (data.success && data.user) {
-            // update data user final setelah OTP berhasil
-            const updatedUser = {
-                nik: data.user.NIK || data.user.nik || nik,
-                username: data.user.Username || data.user.username || "User",
-                email: data.user.Email || data.user.email || null,
-                role: data.user.Role || data.user.role || "Member",
-                avatar: data.user.ProfilAvatar || data.user.avatar || null
-            };
+        if (data.success) {
+            // Jangan overwrite avatar dari login, cukup update status verified
+            let updatedUser = JSON.parse(localStorage.getItem("userData"));
+
+            // update field lain kalau ada
+            updatedUser.username = data.user.Username || data.user.username || updatedUser.username;
+            updatedUser.email = data.user.Email || data.user.email || updatedUser.email;
+            updatedUser.role = data.user.Role || data.user.role || updatedUser.role;
 
             currentUser = updatedUser;
             localStorage.setItem("userData", JSON.stringify(updatedUser));
