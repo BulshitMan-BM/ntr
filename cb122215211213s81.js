@@ -505,84 +505,70 @@ async function resendOtp() {
         alert('Gagal mengirim ulang OTP. Silakan coba lagi.');
     }
 }
-
-// === CAPTCHA FUNCTIONALITY ===
+// ===== CAPTCHA =====
 let currentCaptcha = '';
-
 function generateCaptcha() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-    let captcha = '';
-    for (let i = 0; i < 6; i++) {
-        captcha += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    currentCaptcha = captcha;
+    currentCaptcha = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
     const captchaText = document.getElementById('captcha-text');
-    if (captchaText) captchaText.textContent = captcha;
+    if(captchaText) captchaText.textContent = currentCaptcha;
 }
 
 function validateCaptcha(input) {
     return input === currentCaptcha;
 }
 
-// === LOGIN FORM + CAPTCHA ===
+// Initialize login functionality when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Inisialisasi CAPTCHA
+    // ===== INIT CAPTCHA =====
+generateCaptcha();
+document.getElementById('refresh-captcha')?.addEventListener('click', function() {
     generateCaptcha();
-    const refreshCaptcha = document.getElementById('refresh-captcha');
-    if (refreshCaptcha) {
-        refreshCaptcha.addEventListener('click', function() {
-            generateCaptcha();
-            const captchaInput = document.getElementById('captcha');
-            if (captchaInput) captchaInput.value = '';
-        });
+    const captchaInput = document.getElementById('captcha');
+    if(captchaInput) captchaInput.value = '';
+});
+        // === THEME INITIALIZATION ===
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        document.getElementById('login-dark-mode-icon').className = 'fas fa-sun';
+    } else {
+        document.documentElement.classList.remove('dark');
+        document.getElementById('login-dark-mode-icon').className = 'fas fa-moon';
     }
-
-    // Login form
     document.getElementById('login-form').addEventListener('submit', async function(e) {
         e.preventDefault();
+        
         const nik = document.getElementById('nik').value;
         const password = document.getElementById('password').value;
-        const captchaInput = document.getElementById('captcha').value;
         const loginBtn = document.getElementById('login-btn');
         const loginBtnText = document.getElementById('login-btn-text');
         const loginSpinner = document.getElementById('login-spinner');
+        const loginError = document.getElementById('login-error');
+        const captchaInput = document.getElementById('captcha').value;
 
-        // VALIDASI NIK
+        // Validate NIK format
         if (nik.length !== 16 || !/^\d+$/.test(nik)) {
             showLoginError('NIK harus berupa 16 digit angka');
             return;
         }
-
-        // VALIDASI CAPTCHA
-        if (!validateCaptcha(captchaInput)) {
-            showLoginError('Captcha tidak sesuai');
-            generateCaptcha();
-            document.getElementById('captcha').value = '';
-            return;
-        }
-    // ===== DARK MODE =====
-    const darkIcon = document.getElementById('login-dark-mode-icon');
-    const darkToggle = document.getElementById('login-dark-mode-toggle');
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if(savedTheme==='dark'){ document.documentElement.classList.add('dark'); darkIcon.className='fas fa-sun'; }
-    else{ document.documentElement.classList.remove('dark'); darkIcon.className='fas fa-moon'; }
-    darkToggle?.addEventListener('click', function(){
-        document.documentElement.classList.toggle('dark');
-        if(document.documentElement.classList.contains('dark')){
-            darkIcon.className='fas fa-sun'; localStorage.setItem('theme','dark');
-        }else{
-            darkIcon.className='fas fa-moon'; localStorage.setItem('theme','light');
-        }
-    });
+    // ===== VALIDASI CAPTCHA =====
+    if(!validateCaptcha(captchaInput)) {
+        showLoginError('Captcha tidak sesuai');
+        generateCaptcha(); // buat CAPTCHA baru
+        document.getElementById('captcha').value = ''; // reset input
+        return;
+    }
         // Show loading
         loginBtn.disabled = true;
         loginBtnText.textContent = 'Memverifikasi...';
         loginSpinner.style.display = 'inline-block';
-        document.getElementById('login-error').classList.add('hidden');
+        loginError.classList.add('hidden');
 
         try {
-            await login(); // Fungsi login API yang sudah ada
-        } catch (err) {
+            // Call API login
+            await login();
+        } catch (error) {
             showLoginError('Koneksi bermasalah. Silakan coba lagi.');
         }
 
@@ -720,6 +706,21 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('otp-cancel').addEventListener('click', function() {
         hideOtpOverlay();
     });
+
+    // Dark mode for login
+document.getElementById('login-dark-mode-toggle')?.addEventListener('click', function() {
+    const icon = document.getElementById('login-dark-mode-icon');
+    document.documentElement.classList.toggle('dark');
+    
+    if (document.documentElement.classList.contains('dark')) {
+        icon.className = 'fas fa-sun';
+        localStorage.setItem('theme', 'dark');  // ✅ simpan preferensi
+    } else {
+        icon.className = 'fas fa-moon';
+        localStorage.setItem('theme', 'light'); // ✅ simpan preferensi
+    }
+});
+
 
     // Initialize app
     const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
