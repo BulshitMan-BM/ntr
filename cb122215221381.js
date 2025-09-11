@@ -506,18 +506,7 @@ async function resendOtp() {
     }
 }
 
-// Initialize login functionality when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-        // === THEME INITIALIZATION ===
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-        document.getElementById('login-dark-mode-icon').className = 'fas fa-sun';
-    } else {
-        document.documentElement.classList.remove('dark');
-        document.getElementById('login-dark-mode-icon').className = 'fas fa-moon';
-    }
-   // === CAPTCHA FUNCTIONALITY ===
+// === CAPTCHA FUNCTIONALITY ===
 let currentCaptcha = '';
 
 function generateCaptcha() {
@@ -535,10 +524,10 @@ function validateCaptcha(input) {
     return input === currentCaptcha;
 }
 
-// Initialize CAPTCHA on page load
+// === LOGIN FORM + CAPTCHA ===
 document.addEventListener('DOMContentLoaded', function() {
+    // Inisialisasi CAPTCHA
     generateCaptcha();
-
     const refreshCaptcha = document.getElementById('refresh-captcha');
     if (refreshCaptcha) {
         refreshCaptcha.addEventListener('click', function() {
@@ -547,51 +536,70 @@ document.addEventListener('DOMContentLoaded', function() {
             if (captchaInput) captchaInput.value = '';
         });
     }
-});
 
-// === LOGIN FORM ===
-document.getElementById('login-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const nik = document.getElementById('nik').value;
-    const password = document.getElementById('password').value;
-    const captchaInput = document.getElementById('captcha').value;
-    const loginBtn = document.getElementById('login-btn');
-    const loginBtnText = document.getElementById('login-btn-text');
-    const loginSpinner = document.getElementById('login-spinner');
-    const loginError = document.getElementById('login-error');
-
-    // VALIDASI NIK
-    if (nik.length !== 16 || !/^\d+$/.test(nik)) {
-        showLoginError('NIK harus berupa 16 digit angka');
-        return;
+    // Dark mode toggle
+    const darkIcon = document.getElementById('login-dark-mode-icon');
+    const darkToggle = document.getElementById('login-dark-mode-toggle');
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        darkIcon.className = 'fas fa-sun';
+    } else {
+        document.documentElement.classList.remove('dark');
+        darkIcon.className = 'fas fa-moon';
     }
+    darkToggle?.addEventListener('click', function() {
+        document.documentElement.classList.toggle('dark');
+        if (document.documentElement.classList.contains('dark')) {
+            darkIcon.className = 'fas fa-sun';
+            localStorage.setItem('theme', 'dark');
+        } else {
+            darkIcon.className = 'fas fa-moon';
+            localStorage.setItem('theme', 'light');
+        }
+    });
 
-    // VALIDASI CAPTCHA
-    if (!validateCaptcha(captchaInput)) {
-        showLoginError('Captcha tidak sesuai');
-        generateCaptcha(); // refresh otomatis jika salah
-        return;
-    }
+    // Login form
+    document.getElementById('login-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const nik = document.getElementById('nik').value;
+        const password = document.getElementById('password').value;
+        const captchaInput = document.getElementById('captcha').value;
+        const loginBtn = document.getElementById('login-btn');
+        const loginBtnText = document.getElementById('login-btn-text');
+        const loginSpinner = document.getElementById('login-spinner');
 
-    // SHOW LOADING
-    loginBtn.disabled = true;
-    loginBtnText.textContent = 'Memverifikasi...';
-    loginSpinner.style.display = 'inline-block';
-    loginError.classList.add('hidden');
+        // VALIDASI NIK
+        if (nik.length !== 16 || !/^\d+$/.test(nik)) {
+            showLoginError('NIK harus berupa 16 digit angka');
+            return;
+        }
 
-    try {
-        await login(); // fungsi login API kamu sudah ada
-    } catch (error) {
-        showLoginError('Koneksi bermasalah. Silakan coba lagi.');
-    }
+        // VALIDASI CAPTCHA
+        if (!validateCaptcha(captchaInput)) {
+            showLoginError('Captcha tidak sesuai');
+            generateCaptcha();
+            document.getElementById('captcha').value = '';
+            return;
+        }
 
-    // RESET BUTTON
-    loginBtn.disabled = false;
-    loginBtnText.textContent = 'Masuk';
-    loginSpinner.style.display = 'none';
-});
+        // Show loading
+        loginBtn.disabled = true;
+        loginBtnText.textContent = 'Memverifikasi...';
+        loginSpinner.style.display = 'inline-block';
+        document.getElementById('login-error').classList.add('hidden');
 
+        try {
+            await login(); // Fungsi login API yang sudah ada
+        } catch (err) {
+            showLoginError('Koneksi bermasalah. Silakan coba lagi.');
+        }
+
+        // Reset button
+        loginBtn.disabled = false;
+        loginBtnText.textContent = 'Masuk';
+        loginSpinner.style.display = 'none';
+    });
 
     // Password toggle
     document.getElementById('toggle-password').addEventListener('click', function() {
