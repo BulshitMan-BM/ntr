@@ -17,7 +17,28 @@ const ACTIVITY_CHECK_INTERVAL = 30 * 1000; // Check every 30 seconds
 
 // API Configuration
 const API_URL = "https://test.bulshitman1.workers.dev";
+let currentCaptcha = '';
+let captchaVerified = false;
+// === FUNGSI GENERATE CAPTCHA ===
+function generateCaptcha() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+    currentCaptcha = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+    const captchaText = document.getElementById('captcha-text');
+    if(captchaText) captchaText.textContent = currentCaptcha;
+}
 
+// === FUNGSI VALIDASI CAPTCHA ===
+function validateCaptcha(input) {
+    return input === currentCaptcha;
+}
+
+// === FUNGSI RESET CAPTCHA ===
+function resetCaptcha() {
+    generateCaptcha();
+    const captchaInput = document.getElementById('captcha');
+    if(captchaInput) captchaInput.value = '';
+    captchaVerified = false;
+}
 // === SESSION MANAGEMENT ===
 function startSessionManagement() {
     // Save login time
@@ -565,18 +586,6 @@ async function resendOtp() {
     }
 }
 
-
-// === FUNGSI VALIDASI CAPTCHA ===
-function validateCaptcha(input) {
-    return input === currentCaptcha;
-}
-// === FUNGSI RESET CAPTCHA ===
-function resetCaptcha() {
-    generateCaptcha();
-    const captchaInput = document.getElementById('captcha');
-    if(captchaInput) captchaInput.value = '';
-    captchaVerified = false;
-}
 // Initialize login functionality when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Inisialisasi captcha
