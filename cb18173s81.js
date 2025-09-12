@@ -488,6 +488,10 @@ async function verifyOtp(otp) {
             
             // Update localStorage with complete user data
             localStorage.setItem("userData", JSON.stringify(currentUser));
+        } else if (!data.success) {
+            // TAMPILKAN PESAN ERROR JIKA OTP SALAH
+            showOtpError(data.message || 'Kode OTP salah');
+            return false;
         }
         
         return data.success;
