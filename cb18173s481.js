@@ -133,6 +133,7 @@ function checkExistingSession() {
     updateLastActivity();
 }
 
+// === PERBAIKAN PADA FUNGSI autoLogout ===
 function autoLogout(reason) {
     // Clear all timers
     if (sessionTimer) clearInterval(sessionTimer);
@@ -152,6 +153,9 @@ function autoLogout(reason) {
     currentUser = null;
     resendAttempts = 0; // Reset resend attempts
     
+    // Reset captcha
+    resetCaptcha();
+    
     // Redirect to login silently (no message)
     showScreen('login-screen');
     document.getElementById('login-form').reset();
@@ -169,6 +173,7 @@ function autoLogout(reason) {
     hideOtpOverlay();
     hideLogoutModal();
 }
+
 
 function stopSessionManagement() {
     if (sessionTimer) clearInterval(sessionTimer);
@@ -298,17 +303,24 @@ function showOtpOverlay() {
     }, 300);
 }
 
+// === PERBAIKAN PADA FUNGSI hideOtpOverlay ===
 function hideOtpOverlay() {
     document.getElementById('otp-overlay').classList.remove('active');
     document.body.style.overflow = '';
     clearInterval(otpTimer);
     clearInterval(resendTimer);
     resendAttempts = 0; // Reset resend attempts when closing OTP
+    
     // Clear OTP inputs
     document.querySelectorAll('.otp-input').forEach(input => {
         input.value = '';
         input.classList.remove('filled');
     });
+    
+    // Reset captcha saat kembali ke login
+    if (!captchaVerified) {
+        resetCaptcha();
+    }
 }
 
 // Logout Modal Management
@@ -327,6 +339,7 @@ function handleLogout() {
     showLogoutModal();
 }
 
+// === PERBAIKAN PADA FUNGSI confirmLogout ===
 function confirmLogout() {
     // Stop session management
     stopSessionManagement();
@@ -337,18 +350,25 @@ function confirmLogout() {
     showScreen('login-screen');
     document.getElementById('login-form').reset();
     document.getElementById('login-error').classList.add('hidden');
+    
+    // Reset captcha saat logout
+    resetCaptcha();
+    
     // Reset sidebar state
     sidebarExpanded = true;
-    sidebar.style.width = '256px';
-    header.style.left = '256px';
-    mainContent.style.marginLeft = '256px';
+    if (sidebar) {
+        sidebar.style.width = '256px';
+        header.style.left = '256px';
+        mainContent.style.marginLeft = '256px';
+    }
+    
     // Clear any timers
     if (otpTimer) clearInterval(otpTimer);
     if (resendTimer) clearInterval(resendTimer);
+    
     // Hide OTP overlay if open
     hideOtpOverlay();
 }
-
 // Dashboard initialization
 function initializeDashboard() {
     // Update user info
@@ -544,28 +564,30 @@ async function resendOtp() {
         alert('Gagal mengirim ulang OTP. Silakan coba lagi.');
     }
 }
-// ===== CAPTCHA =====
-let currentCaptcha = '';
-function generateCaptcha() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
-    currentCaptcha = Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-    const captchaText = document.getElementById('captcha-text');
-    if(captchaText) captchaText.textContent = currentCaptcha;
-}
 
+
+// === FUNGSI VALIDASI CAPTCHA ===
 function validateCaptcha(input) {
     return input === currentCaptcha;
 }
-
-// Initialize login functionality when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // ===== INIT CAPTCHA =====
-generateCaptcha();
-document.getElementById('refresh-captcha')?.addEventListener('click', function() {
+// === FUNGSI RESET CAPTCHA ===
+function resetCaptcha() {
     generateCaptcha();
     const captchaInput = document.getElementById('captcha');
     if(captchaInput) captchaInput.value = '';
-});
+    captchaVerified = false;
+}
+// Initialize login functionality when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Inisialisasi captcha
+    generateCaptcha();
+    
+    // Event listener untuk refresh captcha
+    document.getElementById('refresh-captcha')?.addEventListener('click', function() {
+        generateCaptcha();
+        const captchaInput = document.getElementById('captcha');
+        if(captchaInput) captchaInput.value = '';
+    });
         // === THEME INITIALIZATION ===
     const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
@@ -575,47 +597,54 @@ document.getElementById('refresh-captcha')?.addEventListener('click', function()
         document.documentElement.classList.remove('dark');
         document.getElementById('login-dark-mode-icon').className = 'fas fa-moon';
     }
-    document.getElementById('login-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const nik = document.getElementById('nik').value;
-        const password = document.getElementById('password').value;
-        const loginBtn = document.getElementById('login-btn');
-        const loginBtnText = document.getElementById('login-btn-text');
-        const loginSpinner = document.getElementById('login-spinner');
-        const loginError = document.getElementById('login-error');
-        const captchaInput = document.getElementById('captcha').value;
+// === PERBAIKAN PADA LOGIN FORM SUBMIT ===
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const nik = document.getElementById('nik').value;
+    const password = document.getElementById('password').value;
+    const loginBtn = document.getElementById('login-btn');
+    const loginBtnText = document.getElementById('login-btn-text');
+    const loginSpinner = document.getElementById('login-spinner');
+    const loginError = document.getElementById('login-error');
+    const captchaInput = document.getElementById('captcha').value;
 
-        // Validate NIK format
-        if (nik.length !== 16 || !/^\d+$/.test(nik)) {
-            showLoginError('NIK harus berupa 16 digit angka');
-            return;
-        }
+    // Validate NIK format
+    if (nik.length !== 16 || !/^\d+$/.test(nik)) {
+        showLoginError('NIK harus berupa 16 digit angka');
+        return;
+    }
+
     // ===== VALIDASI CAPTCHA =====
     if(!validateCaptcha(captchaInput)) {
         showLoginError('Captcha tidak sesuai');
-        generateCaptcha(); // buat CAPTCHA baru
-        document.getElementById('captcha').value = ''; // reset input
+        // TIDAK generate captcha baru, biarkan user membaca captcha yang sama
+        // Hanya reset input captcha
+        document.getElementById('captcha').value = '';
         return;
     }
-        // Show loading
-        loginBtn.disabled = true;
-        loginBtnText.textContent = 'Memverifikasi...';
-        loginSpinner.style.display = 'inline-block';
-        loginError.classList.add('hidden');
 
-        try {
-            // Call API login
-            await login();
-        } catch (error) {
-            showLoginError('Koneksi bermasalah. Silakan coba lagi.');
-        }
+    // Tandai captcha sudah terverifikasi
+    captchaVerified = true;
+    
+    // Show loading
+    loginBtn.disabled = true;
+    loginBtnText.textContent = 'Memverifikasi...';
+    loginSpinner.style.display = 'inline-block';
+    loginError.classList.add('hidden');
 
-        // Reset button
-        loginBtn.disabled = false;
-        loginBtnText.textContent = 'Masuk';
-        loginSpinner.style.display = 'none';
-    });
+    try {
+        // Call API login
+        await login();
+    } catch (error) {
+        showLoginError('Koneksi bermasalah. Silakan coba lagi.');
+    }
+
+    // Reset button
+    loginBtn.disabled = false;
+    loginBtnText.textContent = 'Masuk';
+    loginSpinner.style.display = 'none';
+});
 
     // Password toggle
     document.getElementById('toggle-password').addEventListener('click', function() {
@@ -744,6 +773,8 @@ document.getElementById('otp-form').addEventListener('submit', function(e) {
 
     // Cancel OTP
     document.getElementById('otp-cancel').addEventListener('click', function() {
+                // Reset captcha saat kembali ke halaman login
+        resetCaptcha();
         hideOtpOverlay();
     });
 
