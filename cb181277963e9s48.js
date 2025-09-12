@@ -1,9 +1,3 @@
-// === OTP VERIFICATION CONFIG ===
-const OTP_VERIFICATION_KEY = 'otp_verified';
-const OTP_TIMESTAMP_KEY = 'otp_timestamp';
-const OTP_VALIDITY_PERIOD = 24 * 60 * 60 * 1000; // 24 jam
-let otpVerified = false;
-
 // Authentication state
 let currentUser = null;
 let otpTimer = null;
@@ -25,7 +19,6 @@ const ACTIVITY_CHECK_INTERVAL = 30 * 1000; // Check every 30 seconds
 const API_URL = "https://test.bulshitman1.workers.dev";
 let currentCaptcha = '';
 let captchaVerified = false;
-
 // === FUNGSI GENERATE CAPTCHA ===
 function generateCaptcha() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -46,43 +39,6 @@ function resetCaptcha() {
     if(captchaInput) captchaInput.value = '';
     captchaVerified = false;
 }
-
-// === OTP VERIFICATION FUNCTIONS ===
-function setOtpVerifiedStatus(verified) {
-    otpVerified = verified;
-    if (verified && currentUser) {
-        const timestamp = Date.now();
-        localStorage.setItem(OTP_VERIFICATION_KEY, 'true');
-        localStorage.setItem(OTP_TIMESTAMP_KEY, timestamp.toString());
-        
-        // Tambahkan checksum untuk keamanan
-        const checksum = btoa(`verified_${timestamp}_${currentUser.nik}`).slice(0, 20);
-        localStorage.setItem('otp_checksum', checksum);
-    } else {
-        localStorage.removeItem(OTP_VERIFICATION_KEY);
-        localStorage.removeItem(OTP_TIMESTAMP_KEY);
-        localStorage.removeItem('otp_checksum');
-    }
-}
-
-function checkOtpVerification() {
-    const verified = localStorage.getItem(OTP_VERIFICATION_KEY) === 'true';
-    const timestamp = parseInt(localStorage.getItem(OTP_TIMESTAMP_KEY) || '0');
-    const checksum = localStorage.getItem('otp_checksum');
-    
-    if (!currentUser || !currentUser.nik) return false;
-    
-    const expectedChecksum = btoa(`verified_${timestamp}_${currentUser.nik}`).slice(0, 20);
-    
-    // Periksa apakah OTP masih valid (dalam periode waktu yang ditentukan)
-    const isExpired = Date.now() - timestamp > OTP_VALIDITY_PERIOD;
-    
-    // Periksa checksum untuk memastikan data tidak dimanipulasi
-    const checksumValid = checksum === expectedChecksum;
-    
-    return verified && !isExpired && checksumValid;
-}
-
 // === SESSION MANAGEMENT ===
 function startSessionManagement() {
     // Save login time
@@ -200,10 +156,7 @@ function checkExistingSession() {
 
 // === PERBAIKAN PADA FUNGSI autoLogout ===
 function autoLogout(reason) {
-    // Hapus status verifikasi OTP
-    setOtpVerifiedStatus(false);
-    
-    // Clear semua timer
+    // Clear all timers
     if (sessionTimer) clearInterval(sessionTimer);
     if (otpTimer) clearInterval(otpTimer);
     if (resendTimer) clearInterval(resendTimer);
@@ -215,35 +168,33 @@ function autoLogout(reason) {
     localStorage.removeItem('pageHiddenTime');
     localStorage.removeItem('userData');
     localStorage.removeItem('nik');
+    localStorage.removeItem('userData');
     
     // Reset user state
     currentUser = null;
-    resendAttempts = 0;
-    otpVerified = false;
+    resendAttempts = 0; // Reset resend attempts
     
     // Reset captcha
     resetCaptcha();
     
-    // Redirect ke login
+    // Redirect to login silently (no message)
     showScreen('login-screen');
     document.getElementById('login-form').reset();
     document.getElementById('login-error').classList.add('hidden');
     
     // Reset sidebar state
-    const sidebar = document.getElementById('sidebar');
-    const header = document.querySelector('header');
-    const mainContent = document.querySelector('main');
-    
-    if (sidebar && header && mainContent) {
+    sidebarExpanded = true;
+    if (sidebar) {
         sidebar.style.width = '256px';
         header.style.left = '256px';
         mainContent.style.marginLeft = '256px';
     }
     
-    // Hide semua modal yang terbuka
+    // Hide any open modals
     hideOtpOverlay();
     hideLogoutModal();
 }
+
 
 function stopSessionManagement() {
     if (sessionTimer) clearInterval(sessionTimer);
@@ -274,17 +225,17 @@ async function login() {
 
     const data = await res.json();
 
-    if (data.success && data.step === "otp") {
-        localStorage.setItem("nik", nik);
+if (data.success && data.step === "otp") {
+    localStorage.setItem("nik", nik);
+    
+    // Store comprehensive user data from API response
+    currentUser = { 
+        nik,
+        email: data.user?.email || '' 
+    };
+    
+    localStorage.setItem("userData", JSON.stringify(currentUser));
         
-        // Store comprehensive user data from API response
-        currentUser = { 
-            nik,
-            email: data.user?.email || '' 
-        };
-        
-        localStorage.setItem("userData", JSON.stringify(currentUser));
-            
         // Reset resend attempts on new login
         resendAttempts = 0;
         
@@ -339,40 +290,28 @@ function startResendCooldown(seconds) {
         }
     }, 1000);
 }
-
-// Screen management - HANYA SATU FUNGSI showScreen
 function showScreen(screenId) {
     const screens = ['login-screen', 'dashboard-screen'];
-    
-    // Proteksi khusus untuk dashboard
-    if (screenId === 'dashboard-screen') {
-        // Periksa apakah OTP sudah diverifikasi
-        if (!checkOtpVerification()) {
-            // Jika tidak terverifikasi, tampilkan pesan error dan tetap di login screen
-            screens.forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-            document.getElementById('login-screen').classList.remove('hidden');
-            
-            showLoginError('Sesi telah berakhir. Silakan login kembali.');
-            
-            // Clear semua data yang tersimpan
-            autoLogout();
-            return;
-        }
+
+    // 🚨 Cek validasi sebelum boleh buka dashboard
+    if (screenId === 'dashboard-screen' && (!currentUser || !currentUser.name)) {
+        // User belum OTP → jangan kasih buka dashboard
+        screenId = 'login-screen';
     }
-    
-    // Lanjutkan dengan menampilkan screen seperti biasa
+
     screens.forEach(id => {
         document.getElementById(id).classList.add('hidden');
     });
-    
-    // Pastikan dashboard hanya ditampilkan jika OTP terverifikasi
-    if (screenId === 'dashboard-screen' && checkOtpVerification()) {
-        document.getElementById(screenId).classList.remove('hidden');
-    } else if (screenId !== 'dashboard-screen') {
-        document.getElementById(screenId).classList.remove('hidden');
-    }
+    document.getElementById(screenId).classList.remove('hidden');
+}
+
+// Screen management
+function showScreen(screenId) {
+    const screens = ['login-screen', 'dashboard-screen'];
+    screens.forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+    });
+    document.getElementById(screenId).classList.remove('hidden');
 }
 
 // OTP Overlay management
@@ -423,41 +362,34 @@ function handleLogout() {
 
 // === PERBAIKAN PADA FUNGSI confirmLogout ===
 function confirmLogout() {
-    // Hentikan session management
+    // Stop session management
     stopSessionManagement();
     
-    // Hapus status verifikasi OTP
-    setOtpVerifiedStatus(false);
-    
     currentUser = null;
-    resendAttempts = 0;
+    resendAttempts = 0; // Reset resend attempts
     hideLogoutModal();
     showScreen('login-screen');
     document.getElementById('login-form').reset();
     document.getElementById('login-error').classList.add('hidden');
     
-    // Reset captcha
+    // Reset captcha saat logout
     resetCaptcha();
     
     // Reset sidebar state
-    const sidebar = document.getElementById('sidebar');
-    const header = document.querySelector('header');
-    const mainContent = document.querySelector('main');
-    
-    if (sidebar && header && mainContent) {
+    sidebarExpanded = true;
+    if (sidebar) {
         sidebar.style.width = '256px';
         header.style.left = '256px';
         mainContent.style.marginLeft = '256px';
     }
     
-    // Clear semua timer
+    // Clear any timers
     if (otpTimer) clearInterval(otpTimer);
     if (resendTimer) clearInterval(resendTimer);
     
-    // Hide OTP overlay jika terbuka
+    // Hide OTP overlay if open
     hideOtpOverlay();
 }
-
 // Dashboard initialization
 function initializeDashboard() {
     // Update user info
@@ -618,9 +550,9 @@ async function verifyOtp(otp) {
             return false;
         }
         
-        // Jika OTP verification successful
+        // If OTP verification successful, update user data with any additional info
         if (data.success && data.user) {
-            // Update currentUser dengan data lengkap
+            // Update currentUser with complete data from OTP verification
             currentUser = {
                 ...currentUser,
                 name: data.user?.Username || data.user?.name || data.user?.username || data.user?.Nama || currentUser.name,
@@ -628,12 +560,10 @@ async function verifyOtp(otp) {
                 avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || currentUser.avatar
             };
             
-            // Simpan status verifikasi OTP
-            setOtpVerifiedStatus(true);
-            
-            // Update localStorage dengan data user lengkap
+            // Update localStorage with complete user data
             localStorage.setItem("userData", JSON.stringify(currentUser));
         } else if (!data.success) {
+            // TAMPILKAN PESAN ERROR JIKA OTP SALAH
             showOtpError(data.message || 'Kode OTP salah');
             return false;
         }
@@ -645,6 +575,7 @@ async function verifyOtp(otp) {
     }
 }
 
+// === RESEND OTP ===
 // === RESEND OTP ===
 async function resendOtp() {
     const nik = localStorage.getItem("nik");
@@ -704,41 +635,6 @@ async function resendOtp() {
 
 // Initialize login functionality when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Intercept upaya untuk memanipulasi DOM dan mengakses dashboard
-    const originalAddClassList = DOMTokenList.prototype.add;
-    const originalRemoveClassList = DOMTokenList.prototype.remove;
-    
-    // Override method add class untuk mencegah penghilangan class hidden pada dashboard
-    DOMTokenList.prototype.add = function() {
-        if (this.element && this.element.id === 'dashboard-screen' && 
-            arguments[0] === 'hidden' && !checkOtpVerification()) {
-            console.warn('Akses tidak sah ke dashboard dicegah');
-            return; // Jangan izinkan penghilangan class hidden
-        }
-        return originalAddClassList.apply(this, arguments);
-    };
-    
-    // Override method remove class untuk mencegah penghilangan class hidden pada dashboard
-    DOMTokenList.prototype.remove = function() {
-        if (this.element && this.element.id === 'dashboard-screen' && 
-            arguments[0] === 'hidden' && !checkOtpVerification()) {
-            console.warn('Akses tidak sah ke dashboard dicegah');
-            return; // Jangan izinkan penghilangan class hidden
-        }
-        return originalRemoveClassList.apply(this, arguments);
-    };
-    
-    // Simpan referensi ke element
-    const elements = document.querySelectorAll('*');
-    elements.forEach(el => {
-        if (el.classList) {
-            Object.defineProperty(el.classList, 'element', {
-                value: el,
-                writable: false
-            });
-        }
-    });
-    
     // Inisialisasi captcha
     generateCaptcha();
     
@@ -748,8 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const captchaInput = document.getElementById('captcha');
         if(captchaInput) captchaInput.value = '';
     });
-    
-    // === THEME INITIALIZATION ===
+        // === THEME INITIALIZATION ===
     const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
         document.documentElement.classList.add('dark');
@@ -758,55 +653,54 @@ document.addEventListener('DOMContentLoaded', function() {
         document.documentElement.classList.remove('dark');
         document.getElementById('login-dark-mode-icon').className = 'fas fa-moon';
     }
+// === PERBAIKAN PADA LOGIN FORM SUBMIT ===
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
     
-    // === PERBAIKAN PADA LOGIN FORM SUBMIT ===
-    document.getElementById('login-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const nik = document.getElementById('nik').value;
-        const password = document.getElementById('password').value;
-        const loginBtn = document.getElementById('login-btn');
-        const loginBtnText = document.getElementById('login-btn-text');
-        const loginSpinner = document.getElementById('login-spinner');
-        const loginError = document.getElementById('login-error');
-        const captchaInput = document.getElementById('captcha').value;
+    const nik = document.getElementById('nik').value;
+    const password = document.getElementById('password').value;
+    const loginBtn = document.getElementById('login-btn');
+    const loginBtnText = document.getElementById('login-btn-text');
+    const loginSpinner = document.getElementById('login-spinner');
+    const loginError = document.getElementById('login-error');
+    const captchaInput = document.getElementById('captcha').value;
 
-        // Validate NIK format
-        if (nik.length !== 16 || !/^\d+$/.test(nik)) {
-            showLoginError('NIK harus berupa 16 digit angka');
-            return;
-        }
+    // Validate NIK format
+    if (nik.length !== 16 || !/^\d+$/.test(nik)) {
+        showLoginError('NIK harus berupa 16 digit angka');
+        return;
+    }
 
-        // ===== VALIDASI CAPTCHA =====
-        if(!validateCaptcha(captchaInput)) {
-            showLoginError('Captcha tidak sesuai');
-            // TIDAK generate captcha baru, biarkan user membaca captcha yang sama
-            // Hanya reset input captcha
-            document.getElementById('captcha').value = '';
-            return;
-        }
+    // ===== VALIDASI CAPTCHA =====
+    if(!validateCaptcha(captchaInput)) {
+        showLoginError('Captcha tidak sesuai');
+        // TIDAK generate captcha baru, biarkan user membaca captcha yang sama
+        // Hanya reset input captcha
+        document.getElementById('captcha').value = '';
+        return;
+    }
 
-        // Tandai captcha sudah terverifikasi
-        captchaVerified = true;
-        
-        // Show loading
-        loginBtn.disabled = true;
-        loginBtnText.textContent = 'Memverifikasi...';
-        loginSpinner.style.display = 'inline-block';
-        loginError.classList.add('hidden');
+    // Tandai captcha sudah terverifikasi
+    captchaVerified = true;
+    
+    // Show loading
+    loginBtn.disabled = true;
+    loginBtnText.textContent = 'Memverifikasi...';
+    loginSpinner.style.display = 'inline-block';
+    loginError.classList.add('hidden');
 
-        try {
-            // Call API login
-            await login();
-        } catch (error) {
-            showLoginError('Koneksi bermasalah. Silakan coba lagi.');
-        }
+    try {
+        // Call API login
+        await login();
+    } catch (error) {
+        showLoginError('Koneksi bermasalah. Silakan coba lagi.');
+    }
 
-        // Reset button
-        loginBtn.disabled = false;
-        loginBtnText.textContent = 'Masuk';
-        loginSpinner.style.display = 'none';
-    });
+    // Reset button
+    loginBtn.disabled = false;
+    loginBtnText.textContent = 'Masuk';
+    loginSpinner.style.display = 'none';
+});
 
     // Password toggle
     document.getElementById('toggle-password').addEventListener('click', function() {
@@ -886,73 +780,74 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
    // Update the OTP form submission to handle API messages
-    document.getElementById('otp-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const otpValue = Array.from(otpInputs).map(input => input.value).join('');
-        const otpBtn = document.getElementById('otp-btn');
-        const otpBtnText = document.getElementById('otp-btn-text');
-        const otpSpinner = document.getElementById('otp-spinner');
-        const otpError = document.getElementById('otp-error');
+document.getElementById('otp-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const otpValue = Array.from(otpInputs).map(input => input.value).join('');
+    const otpBtn = document.getElementById('otp-btn');
+    const otpBtnText = document.getElementById('otp-btn-text');
+    const otpSpinner = document.getElementById('otp-spinner');
+    const otpError = document.getElementById('otp-error');
 
-        if (otpValue.length !== 6) {
-            showOtpError('Masukkan kode OTP 6 digit');
-            return;
+    if (otpValue.length !== 6) {
+        showOtpError('Masukkan kode OTP 6 digit');
+        return;
+    }
+
+    // Show loading
+    otpBtn.disabled = true;
+    otpBtnText.textContent = 'Memverifikasi...';
+    otpSpinner.style.display = 'inline-block';
+    otpError.classList.add('hidden');
+
+    // Call API for OTP verification
+    verifyOtp(otpValue).then(success => {
+        if (success) {
+            hideOtpOverlay();
+            showScreen('dashboard-screen');
+            initializeDashboard();
+            startSessionManagement();
+        } else {
+            // Error message will be shown by verifyOtp function
+            // Clear OTP inputs
+            otpInputs.forEach(input => {
+                input.value = '';
+                input.classList.remove('filled');
+            });
+            otpInputs[0].focus();
         }
 
-        // Show loading
-        otpBtn.disabled = true;
-        otpBtnText.textContent = 'Memverifikasi...';
-        otpSpinner.style.display = 'inline-block';
-        otpError.classList.add('hidden');
-
-        // Call API for OTP verification
-        verifyOtp(otpValue).then(success => {
-            if (success) {
-                hideOtpOverlay();
-                showScreen('dashboard-screen');
-                initializeDashboard();
-                startSessionManagement();
-            } else {
-                // Error message will be shown by verifyOtp function
-                // Clear OTP inputs
-                otpInputs.forEach(input => {
-                    input.value = '';
-                    input.classList.remove('filled');
-                });
-                otpInputs[0].focus();
-            }
-
-            // Reset button
-            otpBtn.disabled = false;
-            otpBtnText.textContent = 'Verifikasi';
-            otpSpinner.style.display = 'none';
-        });
+        // Reset button
+        otpBtn.disabled = false;
+        otpBtnText.textContent = 'Verifikasi';
+        otpSpinner.style.display = 'none';
     });
+});
 
     // Resend OTP
     document.getElementById('resend-otp').addEventListener('click', resendOtp);
 
     // Cancel OTP
     document.getElementById('otp-cancel').addEventListener('click', function() {
-        // Reset captcha saat kembali ke halaman login
+                // Reset captcha saat kembali ke halaman login
         resetCaptcha();
         hideOtpOverlay();
     });
 
     // Dark mode for login
-    document.getElementById('login-dark-mode-toggle')?.addEventListener('click', function() {
-        const icon = document.getElementById('login-dark-mode-icon');
-        document.documentElement.classList.toggle('dark');
-        
-        if (document.documentElement.classList.contains('dark')) {
-            icon.className = 'fas fa-sun';
-            localStorage.setItem('theme', 'dark');  // ✅ simpan preferensi
-        } else {
-            icon.className = 'fas fa-moon';
-            localStorage.setItem('theme', 'light'); // ✅ simpan preferensi
-        }
-    });
+document.getElementById('login-dark-mode-toggle')?.addEventListener('click', function() {
+    const icon = document.getElementById('login-dark-mode-icon');
+    document.documentElement.classList.toggle('dark');
+    
+    if (document.documentElement.classList.contains('dark')) {
+        icon.className = 'fas fa-sun';
+        localStorage.setItem('theme', 'dark');  // ✅ simpan preferensi
+    } else {
+        icon.className = 'fas fa-moon';
+        localStorage.setItem('theme', 'light'); // ✅ simpan preferensi
+    }
+});
+
 
     // Initialize app
     const loginTime = parseInt(localStorage.getItem('loginTime') || '0');
@@ -961,44 +856,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const storedNik = localStorage.getItem('nik');
     const storedUserData = localStorage.getItem('userData');
     const now = Date.now();
-    
-    if (loginTime && lastActivity && storedNik && storedUserData) {
-        try {
-            const userData = JSON.parse(storedUserData);
-            currentUser = userData;
-        } catch (e) {
-            currentUser = null; // 🚫 jangan isi default user
-        }
-
-        const now = Date.now();
-        const timeSinceActivity = now - lastActivity;
-        const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
-
-        // Periksa apakah OTP sudah diverifikasi
-        const hasVerified = checkOtpVerification();
-
-        if (!hasVerified) {
-            // User belum OTP → balik ke login
-            autoLogout();
-            return;
-        }
-
-        if (timeSinceActivity >= INACTIVITY_TIMEOUT + 30000) {
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            return;
-        } else if (pageHiddenTime && timeSinceHidden >= OFFLINE_TIMEOUT + 30000) {
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            return;
-        } else {
-            // Session valid
-            showScreen('dashboard-screen');
-            initializeDashboard();
-            startSessionManagement();
-            return;
-        }
+  if (loginTime && lastActivity && storedNik && storedUserData) {
+    try {
+        const userData = JSON.parse(storedUserData);
+        currentUser = userData;
+    } catch (e) {
+        currentUser = null; // 🚫 jangan isi default user
     }
+
+    const now = Date.now();
+    const timeSinceActivity = now - lastActivity;
+    const timeSinceHidden = pageHiddenTime ? now - pageHiddenTime : 0;
+
+    const hasVerified = currentUser && currentUser.name; // ✅ OTP sukses baru true
+
+    if (!hasVerified) {
+        // User belum OTP → balik ke login
+        autoLogout();
+        return;
+    }
+
+    if (timeSinceActivity >= INACTIVITY_TIMEOUT + 30000) {
+        sessionExpired = true;
+        showScreen('dashboard-screen');
+        initializeDashboard();
+        return;
+    } else if (pageHiddenTime && timeSinceHidden >= OFFLINE_TIMEOUT + 30000) {
+        sessionExpired = true;
+        showScreen('dashboard-screen');
+        initializeDashboard();
+        return;
+    } else {
+        // Session valid
+        showScreen('dashboard-screen');
+        initializeDashboard();
+        startSessionManagement();
+        return;
+    }
+}
+
     
     // No valid session, show login
     showScreen('login-screen');
