@@ -465,22 +465,56 @@ function showLoginError(message) {
 }
 
 // Update showOtpError to ensure it's visible
-function showOtpError(message) {
+function showOtpError(message, type = 'error') {
     const otpError = document.getElementById('otp-error');
     const otpErrorText = document.getElementById('otp-error-text');
-    otpErrorText.textContent = message;
-    otpError.classList.remove('hidden');
     
-    // Scroll to error message
-    otpError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (otpError && otpErrorText) {
+        otpErrorText.textContent = message;
+        otpError.classList.remove('hidden');
+        
+        // Hapus kelas sebelumnya
+        otpError.classList.remove('error-message', 'success-message');
+        
+        // Tambahkan kelas sesuai jenis pesan
+        otpError.classList.add(type + '-message');
+        
+        // Scroll to error message
+        otpError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Tambahkan animasi untuk menarik perhatian
+        otpError.style.animation = 'shake 0.5s ease-in-out';
+        setTimeout(() => {
+            otpError.style.animation = '';
+        }, 500);
+        
+        // Sembunyikan otomatis untuk pesan sukses setelah 3 detik
+        if (type === 'success') {
+            setTimeout(() => {
+                otpError.classList.add('hidden');
+            }, 3000);
+        }
+    } else {
+        // Fallback ke alert jika elemen error tidak ditemukan
+        alert(message);
+    }
 }
 
 // OTP Timer - 2 minutes
 function startOtpTimer() {
+    // Hentikan timer sebelumnya jika ada
+    if (otpTimer) clearInterval(otpTimer);
+    
     let timeLeft = 120; // 2 minutes
     const timerElement = document.getElementById('otp-timer');
     
+    // Update timer immediately
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
     otpTimer = setInterval(() => {
+        timeLeft--;
         const minutes = Math.floor(timeLeft / 60);
         const seconds = timeLeft % 60;
         timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
@@ -489,7 +523,6 @@ function startOtpTimer() {
             clearInterval(otpTimer);
             showOtpError('Kode OTP telah kedaluwarsa');
         }
-        timeLeft--;
     }, 1000);
 }
 
@@ -543,6 +576,7 @@ async function verifyOtp(otp) {
 }
 
 // === RESEND OTP ===
+// === RESEND OTP ===
 async function resendOtp() {
     const nik = localStorage.getItem("nik");
     const resendBtn = document.getElementById('resend-otp');
@@ -560,8 +594,12 @@ async function resendOtp() {
         const data = await res.json();
         
         if (data.success) {
-            // Successfully resent OTP
-            alert(data.message || 'OTP berhasil dikirim ulang');
+            // Successfully resent OTP - TAMPILKAN PESAN DI FORM OTP, BUKAN ALERT
+            showOtpError(data.message || 'OTP berhasil dikirim ulang', 'success');
+            
+            // RESET DAN MULAI ULANG TIMER OTP
+            if (otpTimer) clearInterval(otpTimer);
+            startOtpTimer();
             
             // Increment resend attempts
             resendAttempts++;
@@ -573,7 +611,12 @@ async function resendOtp() {
             startResendCooldown(cooldownSeconds);
         } else {
             // Show error message from API (including blocked account)
-            alert(data.message || 'Gagal mengirim ulang OTP');
+            showOtpError(data.message || 'Gagal mengirim ulang OTP');
+            
+            // Jika tombol resend tidak dinonaktifkan, aktifkan kembali
+            setTimeout(() => {
+                resendBtn.disabled = false;
+            }, 3000);
             
             // If account is blocked, hide OTP overlay
             if (data.message && data.message.toLowerCase().includes('blokir')) {
@@ -582,7 +625,11 @@ async function resendOtp() {
         }
         
     } catch (error) {
-        alert('Gagal mengirim ulang OTP. Silakan coba lagi.');
+        showOtpError('Gagal mengirim ulang OTP. Silakan coba lagi.');
+        // Jika tombol resend tidak dinonaktifkan, aktifkan kembali
+        setTimeout(() => {
+            resendBtn.disabled = false;
+        }, 3000);
     }
 }
 
