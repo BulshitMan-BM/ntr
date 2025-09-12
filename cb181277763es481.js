@@ -487,30 +487,57 @@ function confirmLogout() {
 
 // Dashboard initialization
 function initializeDashboard() {
-    // Update user info
-    if (currentUser) {
+    console.log('Initializing dashboard...');
+    
+    // Pastikan currentUser ada
+    if (!currentUser) {
+        const storedUserData = localStorage.getItem('userData');
+        if (storedUserData) {
+            try {
+                currentUser = JSON.parse(storedUserData);
+            } catch (e) {
+                console.error('Error parsing user data:', e);
+                autoLogout();
+                return;
+            }
+        } else {
+            autoLogout();
+            return;
+        }
+    }
+    
+    // Update user info dengan error handling
+    try {
         const userNameSidebar = document.getElementById('userNameSidebar');
         const userRoleSidebar = document.getElementById('userRoleSidebar');
         const mobileUserName = document.getElementById('mobile-user-name');
         const dashboardTitle = document.getElementById('dashboard-title');
         
-        if (userNameSidebar) userNameSidebar.textContent = currentUser.name;
-        if (userRoleSidebar) userRoleSidebar.textContent = currentUser.role;
-        if (mobileUserName) mobileUserName.textContent = currentUser.name;
-        if (dashboardTitle) dashboardTitle.textContent = `Dashboard - ${currentUser.name}`;
+        if (userNameSidebar) userNameSidebar.textContent = currentUser.name || 'User';
+        if (userRoleSidebar) userRoleSidebar.textContent = currentUser.role || 'User';
+        if (mobileUserName) mobileUserName.textContent = currentUser.name || 'User';
+        if (dashboardTitle) dashboardTitle.textContent = `Dashboard - ${currentUser.name || 'User'}`;
         
         // Update profile images
         updateProfileImages();
+    } catch (error) {
+        console.error('Error updating user info:', error);
     }
 
-    // Initialize dashboard functionality
-    if (typeof handleResize === 'function') handleResize();
-    if (typeof updateNavToggleVisibility === 'function') updateNavToggleVisibility();
-    initializeLogout();
+    // Initialize dashboard functionality dengan error handling
+    try {
+        if (typeof handleResize === 'function') handleResize();
+        if (typeof updateNavToggleVisibility === 'function') updateNavToggleVisibility();
+        initializeLogout();
+        
+        setTimeout(() => {
+            if (typeof setNavigationHeight === 'function') setNavigationHeight();
+        }, 100);
+    } catch (error) {
+        console.error('Error initializing dashboard functions:', error);
+    }
     
-    setTimeout(() => {
-        if (typeof setNavigationHeight === 'function') setNavigationHeight();
-    }, 100);
+    console.log('Dashboard initialized successfully');
 }
 
 // Update profile images with avatar from API
@@ -660,13 +687,20 @@ async function verifyOtp(otp) {
             // Update currentUser with complete data from OTP verification
             currentUser = {
                 ...currentUser,
-                name: data.user?.Username || data.user?.name || data.user?.username || data.user?.Nama || currentUser.name,
-                role: data.user?.Role || data.user?.role || currentUser.role,
-                avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || currentUser.avatar
+                name: data.user?.Username || data.user?.name || data.user?.username || data.user?.Nama || 'User',
+                role: data.user?.Role || data.user?.role || 'User',
+                avatar: data.user?.ProfilAvatar || data.user?.profileAvatar || data.user?.avatar || ''
             };
             
             // Update localStorage with complete user data
             localStorage.setItem("userData", JSON.stringify(currentUser));
+            
+            // HAPus overlay OTP dan tampilkan dashboard
+            hideOtpOverlay();
+            showScreen('dashboard-screen');
+            startSessionManagement();
+            
+            return true;
         } else if (!data.success) {
             // TAMPILKAN PESAN ERROR JIKA OTP SALAH
             showOtpError(data.message || 'Kode OTP salah');
@@ -903,49 +937,46 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update the OTP form submission to handle API messages
     if (otpForm) {
-        otpForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const otpValue = Array.from(otpInputs).map(input => input.value).join('');
-            const otpBtn = document.getElementById('otp-btn');
-            const otpBtnText = document.getElementById('otp-btn-text');
-            const otpSpinner = document.getElementById('otp-spinner');
-            const otpError = document.getElementById('otp-error');
+    otpForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const otpValue = Array.from(otpInputs).map(input => input.value).join('');
+        const otpBtn = document.getElementById('otp-btn');
+        const otpBtnText = document.getElementById('otp-btn-text');
+        const otpSpinner = document.getElementById('otp-spinner');
+        const otpError = document.getElementById('otp-error');
 
-            if (otpValue.length !== 6) {
-                showOtpError('Masukkan kode OTP 6 digit');
-                return;
+        if (otpValue.length !== 6) {
+            showOtpError('Masukkan kode OTP 6 digit');
+            return;
+        }
+
+        // Show loading
+        if (otpBtn) otpBtn.disabled = true;
+        if (otpBtnText) otpBtnText.textContent = 'Memverifikasi...';
+        if (otpSpinner) otpSpinner.style.display = 'inline-block';
+        if (otpError) otpError.classList.add('hidden');
+
+        // Call API for OTP verification
+        verifyOtp(otpValue).then(success => {
+            if (!success) {
+                // Error message will be shown by verifyOtp function
+                // Clear OTP inputs
+                otpInputs.forEach(input => {
+                    input.value = '';
+                    input.classList.remove('filled');
+                });
+                if (otpInputs[0]) otpInputs[0].focus();
             }
 
-            // Show loading
-            if (otpBtn) otpBtn.disabled = true;
-            if (otpBtnText) otpBtnText.textContent = 'Memverifikasi...';
-            if (otpSpinner) otpSpinner.style.display = 'inline-block';
-            if (otpError) otpError.classList.add('hidden');
-
-            // Call API for OTP verification
-            verifyOtp(otpValue).then(success => {
-                if (success) {
-                    hideOtpOverlay();
-                    showScreen('dashboard-screen');
-                    startSessionManagement();
-                } else {
-                    // Error message will be shown by verifyOtp function
-                    // Clear OTP inputs
-                    otpInputs.forEach(input => {
-                        input.value = '';
-                        input.classList.remove('filled');
-                    });
-                    if (otpInputs[0]) otpInputs[0].focus();
-                }
-
-                // Reset button
-                if (otpBtn) otpBtn.disabled = false;
-                if (otpBtnText) otpBtnText.textContent = 'Verifikasi';
-                if (otpSpinner) otpSpinner.style.display = 'none';
-            });
+            // Reset button
+            if (otpBtn) otpBtn.disabled = false;
+            if (otpBtnText) otpBtnText.textContent = 'Verifikasi';
+            if (otpSpinner) otpSpinner.style.display = 'none';
         });
-    }
+    });
+}
+
 
     // Resend OTP
     const resendOtpBtn = document.getElementById('resend-otp');
