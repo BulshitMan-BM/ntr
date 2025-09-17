@@ -15,6 +15,24 @@ function getSession() {
 function clearSession() {
     localStorage.removeItem("sessionId");
 }
+function getDeviceInfo() {
+    return {
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        languages: navigator.languages,
+        vendor: navigator.vendor,
+        hardwareConcurrency: navigator.hardwareConcurrency,
+        deviceMemory: navigator.deviceMemory || null,
+        screen: {
+            width: screen.width,
+            height: screen.height,
+            colorDepth: screen.colorDepth,
+            pixelDepth: screen.pixelDepth
+        },
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    };
+}
 // =======================
 // CAPTCHA GENERATOR
 // =======================
@@ -67,7 +85,7 @@ async function handleLogin(nik, password) {
                 action: "login",
                 nik,
                 password,
-                deviceInfo: navigator.userAgent
+        deviceInfo: getDeviceInfo()  
             })
         });
 
@@ -123,7 +141,6 @@ async function handleOtp(otpValue) {
                 action: "verify-otp",
                 nik,
                 otp: otpValue,
-                deviceInfo: navigator.userAgent
             })
         });
 
