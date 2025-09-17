@@ -15,6 +15,36 @@ function getSession() {
 function clearSession() {
     localStorage.removeItem("sessionId");
 }
+// =======================
+// CAPTCHA GENERATOR
+// =======================
+let generatedCaptcha = "";
+
+function generateCaptcha() {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let captcha = "";
+    for (let i = 0; i < 5; i++) {
+        captcha += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    generatedCaptcha = captcha;
+
+    const captchaEl = document.getElementById("captcha-text");
+    if (captchaEl) {
+        captchaEl.innerHTML = "";
+        for (let char of captcha) {
+            const span = document.createElement("span");
+            span.textContent = char;
+            span.style.display = "inline-block";
+            span.style.transform = `rotate(${(Math.random() - 0.5) * 30}deg)`;
+            span.style.color = `hsl(${Math.floor(Math.random() * 360)}, 70%, 40%)`;
+            span.style.margin = "0 2px";
+            captchaEl.appendChild(span);
+        }
+    }
+}
+
+// Generate saat halaman pertama kali load
+document.addEventListener("DOMContentLoaded", generateCaptcha);
 
 // =======================
 // LOGIN HANDLER
@@ -57,12 +87,12 @@ async function handleLogin(nik, password) {
     } catch (error) {
         console.error('Login error:', error);
         showMessage("Terjadi kesalahan koneksi. Silakan coba lagi.");
-    } finally {
-        // Reset button state
-        loginBtn.disabled = false;
-        loginBtnText.textContent = 'Masuk';
-        loginBtnIcon.className = 'fas fa-arrow-right';
-    }
+} finally {
+    loginBtn.disabled = false;
+    loginBtnText.textContent = 'Masuk';
+    loginBtnIcon.className = 'fas fa-arrow-right';
+    generateCaptcha(); // refresh setelah percobaan
+}
 }
 
 // =======================
@@ -685,19 +715,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Login form handler
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
-        loginForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+loginForm.addEventListener('submit', function(e) {
+    e.preventDefault();
             
-            const nik = document.getElementById('nik').value;
-            const password = document.getElementById('password').value;
-            
-            if (!nik || !password) {
-                showMessage('NIK dan password harus diisi!');
-                return;
-            }
-            
-            handleLogin(nik, password);
-        });
+    const nik = document.getElementById('nik').value;
+    const password = document.getElementById('password').value;
+    const captchaInput = document.getElementById('captcha').value.trim().toUpperCase();
+
+    if (!nik || !password) {
+        showMessage('NIK dan password harus diisi!');
+        return;
+    }
+
+    if (captchaInput !== generatedCaptcha) {
+        showMessage('Kode CAPTCHA salah, silakan coba lagi.');
+        generateCaptcha(); // refresh otomatis
+        return;
+    }
+
+    handleLogin(nik, password);
+});
     }
 
     // OTP form handler
