@@ -729,7 +729,6 @@ loginForm.addEventListener('submit', function(e) {
 
     if (captchaInput !== generatedCaptcha) {
         showMessage('Kode CAPTCHA salah, silakan coba lagi.');
-        generateCaptcha(); // refresh otomatis
         return;
     }
 
