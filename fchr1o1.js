@@ -674,33 +674,47 @@
     }
 
 // ================================
-// Update profile images function
-function updateProfileImages() {
+// Update sidebar/profile info (avatar, name, email, username, role)
+function updateUserProfile() {
+    // Avatar elements
     const sidebarImg = document.getElementById('sidebarAvatar');
     const sidebarFallback = document.getElementById('sidebarProfileFallback');
     const headerFallback = document.getElementById('headerProfileFallback');
-    
-    if (currentUser && currentUser.ProfilAvatar) {
-        // Set image sources with avatar service
-        if (sidebarImg) {
-            sidebarImg.src = `https://pemanis.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(currentUser.ProfilAvatar)}`;
-            sidebarImg.style.display = 'block';
+
+    // Info elements
+    const usernameElem = document.getElementById('userDisplayUsername');
+    const roleElem = document.getElementById('userDisplayRole');
+
+    if (currentUser) {
+        // Update avatar
+        if (currentUser.ProfilAvatar) {
+            if (sidebarImg) {
+                sidebarImg.src = `https://pemanis.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(currentUser.ProfilAvatar)}`;
+                sidebarImg.style.display = 'block';
+            }
+            if (sidebarFallback) sidebarFallback.style.display = 'none';
+            if (headerFallback) headerFallback.style.display = 'none';
+        } else {
+            if (sidebarImg) sidebarImg.style.display = 'none';
+            if (sidebarFallback) sidebarFallback.style.display = 'flex';
+            if (headerFallback) headerFallback.style.display = 'flex';
         }
-        
-        // Hide fallbacks
-        if (sidebarFallback) sidebarFallback.style.display = 'none';
-        if (headerFallback) headerFallback.style.display = 'none';
+
+        // Update text info
+        if (usernameElem) usernameElem.textContent = currentUser.Username || 'hayhoyy';
+        if (roleElem) roleElem.textContent = currentUser.Role || '';
     } else {
-        // Hide images and show fallbacks
+        // Default fallback when no user
         if (sidebarImg) sidebarImg.style.display = 'none';
         if (sidebarFallback) sidebarFallback.style.display = 'flex';
         if (headerFallback) headerFallback.style.display = 'flex';
+        if (usernameElem) usernameElem.textContent = 'heyhoy';
+        if (roleElem) roleElem.textContent = '';
     }
 }
 
-// Optional: Call it after login success
-window.addEventListener('loginSuccess', () => {
-    updateProfileImages();
-});
+// Panggil setelah login sukses atau validasi session
+window.addEventListener('loginSuccess', updateUserProfile);
+
 
 })();
