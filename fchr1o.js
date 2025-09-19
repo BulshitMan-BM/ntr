@@ -673,7 +673,34 @@
         LoginManager.init();
     }
 
-    // Expose LoginManager globally
-    window.loginManager = LoginManager;
+// ================================
+// Update profile images function
+function updateProfileImages() {
+    const sidebarImg = document.getElementById('sidebarAvatar');
+    const sidebarFallback = document.getElementById('sidebarProfileFallback');
+    const headerFallback = document.getElementById('headerProfileFallback');
+    
+    if (currentUser && currentUser.ProfilAvatar) {
+        // Set image sources with avatar service
+        if (sidebarImg) {
+            sidebarImg.src = `https://pemanis.bulshitman1.workers.dev/avatar?url=${encodeURIComponent(currentUser.ProfilAvatar)}`;
+            sidebarImg.style.display = 'block';
+        }
+        
+        // Hide fallbacks
+        if (sidebarFallback) sidebarFallback.style.display = 'none';
+        if (headerFallback) headerFallback.style.display = 'none';
+    } else {
+        // Hide images and show fallbacks
+        if (sidebarImg) sidebarImg.style.display = 'none';
+        if (sidebarFallback) sidebarFallback.style.display = 'flex';
+        if (headerFallback) headerFallback.style.display = 'flex';
+    }
+}
+
+// Optional: Call it after login success
+window.addEventListener('loginSuccess', () => {
+    updateProfileImages();
+});
 
 })();
